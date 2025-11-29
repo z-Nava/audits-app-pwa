@@ -17,7 +17,7 @@ import { AuthService } from "../../services/AuthService";
 const Login: React.FC = () => {
   const loginStore = useUserStore((s) => s.login);
 
-  const [email, setEmail] = useState("");
+  const [loginField, setLoginField] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
 
@@ -25,7 +25,7 @@ const Login: React.FC = () => {
     try {
       setError("");
 
-      const response = await AuthService.login(email, password);
+      const response = await AuthService.login(loginField, password);
       const token = response.data.token;
       const user = response.data.user;
 
@@ -61,11 +61,11 @@ const Login: React.FC = () => {
 
               {/* Campo Email */}
               <IonItem>
-                <IonLabel position="stacked">Email</IonLabel>
+                <IonLabel position="stacked">Número de empleado o email</IonLabel>
                 <IonInput
-                  value={email}
-                  placeholder="correo@ejemplo.com"
-                  onIonChange={(e) => setEmail(e.detail.value!)}
+                  value={loginField}
+                  placeholder="TEC2001"
+                  onIonChange={(e) => setLoginField(e.detail.value!)}
                 />
               </IonItem>
 
