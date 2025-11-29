@@ -1,11 +1,13 @@
+// src/store/userStore.ts
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 
-interface User {
+export interface User {
   id: number;
   name: string;
   email: string;
   role?: string;
+  employee_number?: string;
 }
 
 interface AuthState {
@@ -30,7 +32,7 @@ export const useUserStore = create<AuthState>()(
       },
     }),
     {
-      name: "audit-session", // KEY en localStorage
+      name: "audit-session", // clave en localStorage
     }
   )
 );
