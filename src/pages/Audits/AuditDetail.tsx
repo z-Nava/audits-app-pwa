@@ -7,6 +7,9 @@ import {
   IonText,
   IonButton,
   IonLoading,
+  IonCard,
+  IonCardContent,
+  IonIcon,
 } from "@ionic/react";
 
 import { useParams } from "react-router-dom";
@@ -18,6 +21,8 @@ import AuditHeader from "./components/AuditHeader";
 import AuditToolCard from "./components/AuditToolCard";
 import AuditItemForm from "./components/AuditItemForm";
 import AuditPhotos from "./components/AuditPhotos";
+
+import { listCircleOutline, checkmarkDoneOutline } from "ionicons/icons";
 
 const AuditDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -97,49 +102,88 @@ const AuditDetail: React.FC = () => {
 
         {audit && (
           <>
+            {/* HEADER */}
             <AuditHeader audit={audit} readOnly={readOnly} />
 
-            <AuditToolCard
-              tool={audit.assignment.tools![0]}
-              itemExists={!!item}
-              onCreateItem={!readOnly ? createItem : undefined}
-              readOnly={readOnly}
-            />
+            {/* SECCIÓN: HERRAMIENTA */}
+            <IonCard style={{ marginTop: "10px", borderRadius: "16px" }}>
+              <IonCardContent>
+                <h2 style={{ display: "flex", alignItems: "center", marginBottom: "12px" }}>
+                  <IonIcon icon={listCircleOutline} style={{ fontSize: "24px", marginRight: "8px" }} />
+                  Herramienta a Auditar
+                </h2>
 
+                <AuditToolCard
+                  tool={audit.assignment.tools![0]}
+                  itemExists={!!item}
+                  onCreateItem={!readOnly ? createItem : undefined}
+                  readOnly={readOnly}
+                />
+              </IonCardContent>
+            </IonCard>
+
+            {/* SECCIÓN: FORMULARIO DEL ITEM */}
             {item && (
-              <AuditItemForm
-                item={item}
-                onChange={readOnly ? () => {} : (f, v) => setItem({ ...item, [f]: v })}
-                onSave={readOnly ? undefined : saveItem}
-                readOnly={readOnly}
-              />
+              <IonCard style={{ marginTop: "15px", borderRadius: "16px" }}>
+                <IonCardContent>
+                  <h2 style={{ display: "flex", alignItems: "center", marginBottom: "12px" }}>
+                    <IonIcon icon={checkmarkDoneOutline} style={{ fontSize: "26px", marginRight: "8px" }} />
+                    Resultado de Auditoría
+                  </h2>
+
+                  <AuditItemForm
+                    item={item}
+                    onChange={readOnly ? () => {} : (f, v) => setItem({ ...item, [f]: v })}
+                    onSave={readOnly ? undefined : saveItem}
+                    readOnly={readOnly}
+                  />
+                </IonCardContent>
+              </IonCard>
             )}
 
+            {/* SECCIÓN: FOTOS */}
             {item && (
-              <AuditPhotos
-                photos={photos}
-                onAddPhoto={readOnly ? undefined : addPhoto}
-                readOnly={readOnly}
-              />
+              <IonCard style={{ marginTop: "15px", borderRadius: "16px" }}>
+                <IonCardContent>
+                  <AuditPhotos
+                    photos={photos}
+                    onAddPhoto={readOnly ? undefined : addPhoto}
+                    readOnly={readOnly}
+                  />
+                </IonCardContent>
+              </IonCard>
             )}
 
-            {/* Solo mostrar botón si es editable */}
+            {/* BOTÓN ENVIAR */}
             {!readOnly && item && (
               <IonButton
                 expand="block"
                 color="success"
                 onClick={submitAudit}
-                style={{ marginTop: "20px" }}
+                style={{
+                  marginTop: "20px",
+                  height: "50px",
+                  borderRadius: "14px",
+                  fontWeight: 600,
+                }}
               >
                 ENVIAR AUDITORÍA
               </IonButton>
             )}
 
-            {/* Mensaje de estado */}
+            {/* ESTADO READ ONLY */}
             {readOnly && (
               <IonText color="medium">
-                <p style={{ marginTop: "20px", textAlign: "center" }}>
-                  Auditoría en estado: <strong>{audit.status.toUpperCase()}</strong>
+                <p
+                  style={{
+                    marginTop: "24px",
+                    textAlign: "center",
+                    fontSize: "16px",
+                    fontWeight: 600,
+                  }}
+                >
+                  Auditoría en estado:{" "}
+                  <strong style={{ textTransform: "uppercase" }}>{audit.status}</strong>
                 </p>
               </IonText>
             )}

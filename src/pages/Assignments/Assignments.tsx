@@ -7,11 +7,16 @@ import {
   IonLabel,
   IonButton,
   IonText,
+  IonCard,
+  IonCardContent,
+  IonChip,
+  IonIcon,
 } from "@ionic/react";
 
+import { constructOutline, timeOutline, eyeOutline, playOutline } from "ionicons/icons";
 import api from "../../services/api";
 import useUserStore from "../../store/userStore";
-import { AuditService } from "../../services/AuditService"; // ✔ IMPORTADO
+import { AuditService } from "../../services/AuditService";
 
 interface Assignment {
   id: number;
@@ -22,7 +27,7 @@ interface Assignment {
 }
 
 interface AssignmentWithAudit extends Assignment {
-  audit?: any; // ideal: audit?: Audit | null
+  audit?: any;
 }
 
 const Assignments: React.FC = () => {
@@ -40,7 +45,7 @@ const Assignments: React.FC = () => {
     const withAudit = await Promise.all(
       base.map(async (a: Assignment) => {
         const audit = await AuditService.findByAssignment(a.id, user.id);
-        return { ...a, audit } as AssignmentWithAudit;
+        return { ...a, audit };
       })
     );
 
@@ -60,11 +65,8 @@ const Assignments: React.FC = () => {
         summary: "",
       });
 
-      const audit = resp.data;
-
-      window.location.href = `/audit/${audit.id}`;
-    } catch (err: any) {
-      console.log("ERROR 422:", err.response?.data);
+      window.location.href = `/audit/${resp.data.id}`;
+    } catch (err) {
       alert("Error al iniciar auditoría");
     }
   }
@@ -76,63 +78,89 @@ const Assignments: React.FC = () => {
   return (
     <IonPage>
       <IonContent className="ion-padding">
-        <h2>Mis Asignaciones</h2>
 
-        {loading && <IonText>Cargando...</IonText>}
+        <h1 style={{ fontWeight: 700, marginBottom: "20px" }}>
+          Mis Asignaciones
+        </h1>
 
+        {/* Loading / vacio */}
+        {loading && <IonText>Cargando asignaciones...</IonText>}
         {!loading && assignments.length === 0 && (
           <IonText>No tienes asignaciones pendientes.</IonText>
         )}
 
+        {/* Lista */}
         <IonList>
           {assignments.map((a) => (
-            <IonItem key={a.id}>
-              <IonLabel>
-                <h3>{a.line.name}</h3>
-                <p>Shift: {a.shift}</p>
+            <IonCard key={a.id} style={{ borderRadius: "16px" }}>
+              <IonCardContent>
+
+                {/* TITULO */}
+                <h2 style={{ fontSize: "20px", marginBottom: "6px" }}>
+                  <IonIcon icon={constructOutline} style={{ marginRight: "6px" }} />
+                  {a.line.name}
+                </h2>
+
+                {/* TURNO / NOTES */}
+                <div style={{ marginBottom: "10px" }}>
+                  <IonChip color="primary">
+                    <IonIcon icon={timeOutline} />
+                    <IonLabel>Turno {a.shift}</IonLabel>
+                  </IonChip>
+
+                  {a.notes && (
+                    <p style={{ fontSize: "14px", marginTop: "4px", color: "#555" }}>
+                      Nota: {a.notes}
+                    </p>
+                  )}
+                </div>
 
                 {/* ESTADO DEL AUDIT */}
                 {a.audit?.status === "submitted" && (
-                  <p style={{ color: "orange" }}>
-                    Auditoría enviada – en revisión
-                  </p>
+                  <IonChip color="warning">
+                    <IonLabel>En revisión</IonLabel>
+                  </IonChip>
                 )}
 
                 {a.audit?.status === "reviewed" && (
-                  <p style={{ color: "blue" }}>
-                    Revisión completada (pendiente de acciones)
-                  </p>
+                  <IonChip color="tertiary">
+                    <IonLabel>Revisada (pendiente acciones)</IonLabel>
+                  </IonChip>
                 )}
 
                 {a.audit?.status === "closed" && (
-                  <p style={{ color: "green" }}>
-                    Auditoría aprobada y cerrada
-                  </p>
+                  <IonChip color="success">
+                    <IonLabel>Aprobada y cerrada</IonLabel>
+                  </IonChip>
                 )}
-              </IonLabel>
 
-              {/* -------- BOTONES -------- */}
+                {/* BOTONES */}
+                <div style={{ marginTop: "14px", textAlign: "right" }}>
+                  {a.audit ? (
+                    <IonButton
+                      size="small"
+                      color="medium"
+                      onClick={() => (window.location.href = `/audit/${a.audit.id}`)}
+                    >
+                      <IonIcon icon={eyeOutline} slot="start" />
+                      Ver auditoría
+                    </IonButton>
+                  ) : (
+                    a.status === "assigned" && (
+                      <IonButton
+                        size="small"
+                        color="primary"
+                        onClick={() => startAudit(a)}
+                      >
+                        <IonIcon icon={playOutline} slot="start" />
+                        Iniciar
+                      </IonButton>
+                    )
+                  )}
+                </div>
 
-              {/* SI YA HAY AUDITORÍA */}
-              {a.audit && (
-                <IonButton
-                  slot="end"
-                  color="medium"
-                  onClick={() =>
-                    (window.location.href = `/audit/${a.audit.id}`)
-                  }
-                >
-                  Ver auditoría
-                </IonButton>
-              )}
-
-              {/* SI NO HAY AUDITORÍA Y ESTA ASSIGNMENT ESTÁ SIN INICIAR */}
-              {!a.audit && a.status === "assigned" && (
-                <IonButton slot="end" onClick={() => startAudit(a)}>
-                  Iniciar
-                </IonButton>
-              )}
-            </IonItem>
+              </IonCardContent>
+            </IonCard>
           ))}
         </IonList>
       </IonContent>
