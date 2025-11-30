@@ -38,6 +38,7 @@ export interface AuditItem {
   tool_id: number;
   result: string;
   comments?: string;
+  defects?: string;
 }
 
 export interface Audit {

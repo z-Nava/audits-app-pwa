@@ -2,14 +2,15 @@ import api from "./api";
 import { AuditListResponse, Audit } from "../types/audits"
 
 export const AuditService = {
+
   async list(): Promise<AuditListResponse> {
-    const response = await api.get("/audits");
+    const response = await api.get<AuditListResponse>("/audits");
     return response.data;
   },
 
   async getAudit(id: number): Promise<Audit> {
-    const response = await api.get(`/audits/${id}`);
-    return response.data;
+    const resp = await api.get<Audit>(`/audits/${id}`);
+    return resp.data;
   },
 
   async createItem(auditId: number, toolId: number) {
@@ -27,10 +28,9 @@ export const AuditService = {
   },
 
   async submitAudit(auditId: number) {
-    return api.post(`/audits/${auditId}/submit`, {
+    const resp = await api.post(`/audits/${auditId}/submit`, {
       ended_at: new Date().toISOString(),
     });
+    return resp.data;
   },
 };
-
-

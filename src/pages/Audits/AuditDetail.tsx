@@ -1,54 +1,88 @@
 import React, { useEffect, useState } from "react";
-import { IonPage, IonContent, IonButton, IonText, IonItem, IonLabel, IonSelect, IonSelectOption, IonTextarea } from "@ionic/react";
-import { AuditService } from "../../services/AuditService";
+import {
+  IonPage,
+  IonContent,
+  IonText,
+  IonButton,
+  IonLoading,
+} from "@ionic/react";
+
 import { useParams } from "react-router-dom";
-import type { Audit, Tool } from "../../types/audits";
+
+import { Audit, AuditItem } from "../../types/audits";
+import { AuditService } from "../../services/AuditService";
+import api from "../../services/api";
+
+import AuditHeader from "./components/AuditHeader";
+import AuditToolCard from "./components/AuditToolCard";
+import AuditItemForm from "./components/AuditItemForm";
+import AuditPhotos from "./components/AuditPhotos";
 
 const AuditDetail: React.FC = () => {
-  const { id } = useParams<{ id: string }>();
-  const auditId = Number(id);
-
+  const { id } = useParams();
   const [audit, setAudit] = useState<Audit | null>(null);
-  const [itemId, setItemId] = useState<number | null>(null);
-  const [result, setResult] = useState("PASS");
-  const [comments, setComments] = useState("");
+  const [item, setItem] = useState<AuditItem | null>(null);
+  const [photos, setPhotos] = useState<string[]>([]);
+
+  const [loading, setLoading] = useState(false);
 
   async function loadAudit() {
-    const data = await AuditService.getAudit(auditId);
+    if (!id) return;
+
+    setLoading(true);
+    const data = await AuditService.getAudit(Number(id));
     setAudit(data);
-    if (data.items?.length) {
-      const item = data.items[0];
-      setItemId(item.id);
-      setResult(item.result);
-      setComments(item.comments || "");
+
+    // Como SOLO hay una herramienta por asignación, revisamos si ya tiene item
+    if (data.items && data.items.length > 0) {
+      setItem(data.items[0]);
     }
+
+    setLoading(false);
   }
 
   async function createItem() {
     if (!audit) return;
-    const tool: Tool | undefined = audit.assignment.tools?.[0];
-    if (!tool) {
-      alert("No hay herramienta asignada.");
-      return;
-    }
 
-    const item = await AuditService.createItem(audit.id, tool.id);
-    setItemId(item.id);
-    alert("Item creado");
+    const toolId = audit.assignment.tools![0].id;
+
+    const newItem = await AuditService.createItem(audit.id, toolId);
+
+    setItem(newItem);
   }
 
   async function saveItem() {
-    if (!itemId) return alert("Primero debes crear el item.");
-    await AuditService.updateItem(itemId, {
-      result,
-      comments,
+    if (!item) return;
+    setLoading(true);
+
+    const updated = await AuditService.updateItem(item.id, item);
+    setItem(updated);
+
+    setLoading(false);
+  }
+
+  async function addPhoto(file: File) {
+    if (!item) return;
+
+    const form = new FormData();
+    form.append("photo", file);
+
+    const resp = await api.post(`/audit-items/${item.id}/photos`, form, {
+      headers: { "Content-Type": "multipart/form-data" },
     });
-    alert("Guardado");
+
+    const url = resp.data.url; // tu API debería devolver la URL
+    setPhotos([...photos, url]);
   }
 
   async function submitAudit() {
-    await AuditService.submitAudit(auditId);
-    alert("Auditoría enviada");
+    if (!audit) return;
+
+    setLoading(true);
+    await AuditService.submitAudit(audit.id);
+    setLoading(false);
+
+    alert("Auditoría enviada correctamente");
     window.location.href = "/assignments";
   }
 
@@ -59,61 +93,51 @@ const AuditDetail: React.FC = () => {
   return (
     <IonPage>
       <IonContent className="ion-padding">
+        <IonLoading isOpen={loading} message={"Cargando..."} />
+
+        {!audit && <IonText>Cargando...</IonText>}
 
         {audit && (
           <>
-            <h2>Auditoría {audit.audit_code}</h2>
-            <p>Línea: {audit.assignment.line.name}</p>
-            <p>Shift: {audit.shift}</p>
+            {/* HEADER */}
+            <AuditHeader audit={audit} />
 
-            {/* NOTAS */}
-            {audit.assignment.notes && (
-              <IonText color="medium">
-                <p><strong>Notas:</strong> {audit.assignment.notes}</p>
-              </IonText>
+            {/* TOOL */}
+            <AuditToolCard
+              tool={audit.assignment.tools![0]}
+              itemExists={!!item}
+              onCreateItem={createItem}
+            />
+
+            {/* FORMULARIO DEL ITEM */}
+            {item && (
+              <AuditItemForm
+                item={item}
+                onChange={(field, value) =>
+                  setItem({ ...item, [field]: value })
+                }
+                onSave={saveItem}
+              />
             )}
 
-            {/* Crear ITEM */}
-            {!itemId && (
-              <IonButton onClick={createItem}>
-                Registrar resultado de herramienta
+            {/* PHOTOS */}
+            {item && (
+              <AuditPhotos photos={photos} onAddPhoto={addPhoto} />
+            )}
+
+            {/* BOTÓN DE ENVIAR */}
+            {item && (
+              <IonButton
+                expand="block"
+                color="success"
+                onClick={submitAudit}
+                style={{ marginTop: "20px" }}
+              >
+                ENVIAR AUDITORÍA
               </IonButton>
-            )}
-
-            {/* FORMULARIO */}
-            {itemId && (
-              <>
-                <IonItem>
-                  <IonLabel>Resultado</IonLabel>
-                  <IonSelect
-                    value={result}
-                    onIonChange={(e) => setResult(e.detail.value)}
-                  >
-                    <IonSelectOption value="PASS">PASS</IonSelectOption>
-                    <IonSelectOption value="FAIL">FAIL</IonSelectOption>
-                  </IonSelect>
-                </IonItem>
-
-                <IonItem>
-                  <IonLabel position="stacked">Comentarios</IonLabel>
-                  <IonTextarea
-                    value={comments}
-                    onIonChange={(e) => setComments(e.detail.value!)}
-                  />
-                </IonItem>
-
-                <IonButton expand="block" onClick={saveItem}>
-                  Guardar resultado
-                </IonButton>
-
-                <IonButton color="success" expand="block" onClick={submitAudit}>
-                  Enviar Auditoría
-                </IonButton>
-              </>
             )}
           </>
         )}
-
       </IonContent>
     </IonPage>
   );
