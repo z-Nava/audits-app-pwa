@@ -19,12 +19,13 @@ import AuditItemForm from "./components/AuditItemForm";
 import AuditPhotos from "./components/AuditPhotos";
 
 const AuditDetail: React.FC = () => {
-  const { id } = useParams();
+  const { id } = useParams<{ id: string }>();
   const [audit, setAudit] = useState<Audit | null>(null);
   const [item, setItem] = useState<AuditItem | null>(null);
   const [photos, setPhotos] = useState<string[]>([]);
-
   const [loading, setLoading] = useState(false);
+
+  const isReadOnly = audit?.status !== "in_progress";
 
   async function loadAudit() {
     if (!id) return;
@@ -33,36 +34,38 @@ const AuditDetail: React.FC = () => {
     const data = await AuditService.getAudit(Number(id));
     setAudit(data);
 
-    // Como SOLO hay una herramienta por asignación, revisamos si ya tiene item
+    // Si ya tiene item
     if (data.items && data.items.length > 0) {
-      setItem(data.items[0]);
+      const i = data.items[0];
+      setItem(i);
+
+      // cargar las fotos
+      const resp = await api.get(`/audit-items/${i.id}/photos`);
+      setPhotos(resp.data.map((p: any) => p.url));
     }
 
     setLoading(false);
   }
 
   async function createItem() {
-    if (!audit) return;
+    if (!audit || isReadOnly) return;
 
     const toolId = audit.assignment.tools![0].id;
-
     const newItem = await AuditService.createItem(audit.id, toolId);
-
     setItem(newItem);
   }
 
   async function saveItem() {
-    if (!item) return;
-    setLoading(true);
+    if (!item || isReadOnly) return;
 
+    setLoading(true);
     const updated = await AuditService.updateItem(item.id, item);
     setItem(updated);
-
     setLoading(false);
   }
 
   async function addPhoto(file: File) {
-    if (!item) return;
+    if (!item || isReadOnly) return;
 
     const form = new FormData();
     form.append("photo", file);
@@ -71,12 +74,11 @@ const AuditDetail: React.FC = () => {
       headers: { "Content-Type": "multipart/form-data" },
     });
 
-    const url = resp.data.url; // tu API debería devolver la URL
-    setPhotos([...photos, url]);
+    setPhotos([...photos, resp.data.url]);
   }
 
   async function submitAudit() {
-    if (!audit) return;
+    if (!audit || isReadOnly) return;
 
     setLoading(true);
     await AuditService.submitAudit(audit.id);
@@ -99,34 +101,51 @@ const AuditDetail: React.FC = () => {
 
         {audit && (
           <>
-            {/* HEADER */}
+            {/* Header con datos del audit */}
             <AuditHeader audit={audit} />
 
-            {/* TOOL */}
+            {/* Tarjeta de herramienta */}
             <AuditToolCard
               tool={audit.assignment.tools![0]}
               itemExists={!!item}
-              onCreateItem={createItem}
+              onCreateItem={!isReadOnly ? createItem : undefined}
+              readOnly={isReadOnly}
             />
 
-            {/* FORMULARIO DEL ITEM */}
+            {/* Si el audit YA está enviado → mostrar mensaje */}
+            {isReadOnly && (
+              <IonText color="medium">
+                <p style={{ fontStyle: "italic", marginTop: "10px" }}>
+                  Esta auditoría fue enviada y está en estado: <strong>{audit.status}</strong>
+                </p>
+              </IonText>
+            )}
+
+            {/* Formulario del ítem */}
             {item && (
               <AuditItemForm
                 item={item}
-                onChange={(field, value) =>
-                  setItem({ ...item, [field]: value })
+                readOnly={isReadOnly}
+                onChange={
+                  !isReadOnly
+                    ? (field, value) => setItem({ ...item, [field]: value })
+                    : undefined
                 }
-                onSave={saveItem}
+                onSave={!isReadOnly ? saveItem : undefined}
               />
             )}
 
-            {/* PHOTOS */}
+            {/* Fotos */}
             {item && (
-              <AuditPhotos photos={photos} onAddPhoto={addPhoto} />
+              <AuditPhotos
+                photos={photos}
+                onAddPhoto={!isReadOnly ? addPhoto : undefined}
+                readOnly={isReadOnly}
+              />
             )}
 
-            {/* BOTÓN DE ENVIAR */}
-            {item && (
+            {/* Botón enviar → solo si puede */}
+            {!isReadOnly && item && (
               <IonButton
                 expand="block"
                 color="success"

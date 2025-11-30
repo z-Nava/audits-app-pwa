@@ -33,4 +33,10 @@ export const AuditService = {
     });
     return resp.data;
   },
+
+  async findByAssignment(assignmentId: number, technicianId: number) {
+    const resp = await api.get(`/audits?assignment_id=${assignmentId}&technician_id=${technicianId}`);
+      return resp.data.data?.[0] ?? null;
+  }
+
 };

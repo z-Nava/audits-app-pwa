@@ -1,4 +1,4 @@
-// src/pages/Audit/components/AuditItemForm.tsx
+// src/pages/Audits/components/AuditItemForm.tsx
 
 import React from "react";
 import {
@@ -16,21 +16,25 @@ import { AuditItem } from "../../../types/audits";
 
 interface Props {
   item: AuditItem;
-  onChange: (field: string, value: any) => void;
-  onSave: () => void;
+  onChange?: (field: string, value: any) => void;
+  onSave?: () => void;
+  readOnly?: boolean;
 }
 
-const AuditItemForm: React.FC<Props> = ({ item, onChange, onSave }) => {
+const AuditItemForm: React.FC<Props> = ({ item, onChange, onSave, readOnly }) => {
   return (
     <IonCard>
       <IonCardContent>
         <h2>Resultado</h2>
 
+        {/* RESULT */}
         <IonItem>
           <IonLabel>Resultado</IonLabel>
+
           <IonSelect
             value={item.result}
-            onIonChange={(e) => onChange("result", e.detail.value)}
+            disabled={readOnly}
+            onIonChange={(e) => onChange && onChange("result", e.detail.value)}
           >
             <IonSelectOption value="PASS">PASS</IonSelectOption>
             <IonSelectOption value="FAIL">FAIL</IonSelectOption>
@@ -38,33 +42,44 @@ const AuditItemForm: React.FC<Props> = ({ item, onChange, onSave }) => {
           </IonSelect>
         </IonItem>
 
-        {/* Comentarios */}
+        {/* COMENTARIOS */}
         <IonItem lines="none">
           <IonLabel position="stacked">Comentarios</IonLabel>
         </IonItem>
 
         <IonTextarea
           value={item.comments ?? ""}
-          onIonChange={(e) => onChange("comments", e.detail.value)}
+          disabled={readOnly}
+          autoGrow
+          onIonChange={(e) => onChange && onChange("comments", e.detail.value)}
         />
 
-        {/* Si FAIL → mostrar campo de defectos */}
+        {/* DEFECTOS (solo si FAIL) */}
         {item.result === "FAIL" && (
           <>
-            <IonItem lines="none">
+            <IonItem lines="none" style={{ marginTop: "12px" }}>
               <IonLabel position="stacked">Defectos</IonLabel>
             </IonItem>
 
             <IonTextarea
               value={item.defects ?? ""}
-              onIonChange={(e) => onChange("defects", e.detail.value)}
+              disabled={readOnly}
+              autoGrow
+              onIonChange={(e) => onChange && onChange("defects", e.detail.value)}
             />
           </>
         )}
 
-        <IonButton expand="block" style={{ marginTop: "15px" }} onClick={onSave}>
-          Guardar Resultado
-        </IonButton>
+        {/* BOTÓN GUARDAR */}
+        {!readOnly && onSave && (
+          <IonButton
+            expand="block"
+            style={{ marginTop: "15px" }}
+            onClick={onSave}
+          >
+            Guardar Resultado
+          </IonButton>
+        )}
       </IonCardContent>
     </IonCard>
   );

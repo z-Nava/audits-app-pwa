@@ -1,5 +1,4 @@
-// src/pages/Audit/components/AuditToolCard.tsx
-
+// src/pages/Audits/components/AuditToolCard.tsx
 import React from "react";
 import { IonCard, IonCardContent, IonButton } from "@ionic/react";
 import { Tool } from "../../../types/audits";
@@ -7,19 +6,20 @@ import { Tool } from "../../../types/audits";
 interface Props {
   tool: Tool;
   itemExists: boolean;
-  onCreateItem: () => void;
+  onCreateItem?: () => Promise<void> | void;
+  readOnly?: boolean;
 }
 
-const AuditToolCard: React.FC<Props> = ({ tool, itemExists, onCreateItem }) => {
+const AuditToolCard: React.FC<Props> = ({ tool, itemExists, onCreateItem, readOnly }) => {
   return (
     <IonCard>
       <IonCardContent>
         <h2>{tool.name}</h2>
         <p><strong>Código:</strong> {tool.code}</p>
-        <p><strong>Modelo:</strong> {tool.model ?? "N/A"}</p>
+        {tool.model && <p><strong>Modelo:</strong> {tool.model}</p>}
 
-        {!itemExists && (
-          <IonButton expand="block" onClick={onCreateItem}>
+        {!readOnly && !itemExists && (
+          <IonButton expand="block" onClick={() => onCreateItem && onCreateItem()}>
             Registrar resultado
           </IonButton>
         )}

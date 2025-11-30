@@ -1,17 +1,19 @@
-// src/pages/Audit/components/AuditPhotos.tsx
-
-import React from "react";
+// src/pages/Audits/components/AuditPhotos.tsx
+import React, { useRef } from "react";
 import { IonCard, IonCardContent, IonButton } from "@ionic/react";
 
 interface Props {
   photos: string[];
-  onAddPhoto: (file: File) => void;
+  onAddPhoto?: (file: File) => Promise<void> | void;
+  readOnly?: boolean;
 }
 
-const AuditPhotos: React.FC<Props> = ({ photos, onAddPhoto }) => {
-  function handleFileSelect(e: any) {
+const AuditPhotos: React.FC<Props> = ({ photos, onAddPhoto, readOnly }) => {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
-    if (file) onAddPhoto(file);
+    if (file && onAddPhoto) onAddPhoto(file);
   }
 
   return (
@@ -19,25 +21,34 @@ const AuditPhotos: React.FC<Props> = ({ photos, onAddPhoto }) => {
       <IonCardContent>
         <h2>Fotografías</h2>
 
-        {photos.length > 0 &&
-          photos.map((p, i) => (
-            <img
-              key={i}
-              src={p}
-              alt="foto"
-              style={{ width: "100%", marginBottom: "10px", borderRadius: "6px" }}
+        {!readOnly && (
+          <>
+            <input
+              type="file"
+              ref={fileInputRef}
+              hidden
+              accept="image/*"
+              onChange={handleFileSelect}
             />
-          ))}
 
-        <IonButton expand="block">
-          <input
-            type="file"
-            accept="image/*"
-            style={{ opacity: 0, position: "absolute", width: "100%", height: "100%" }}
-            onChange={handleFileSelect}
-          />
-          Agregar Foto
-        </IonButton>
+            <IonButton expand="block" onClick={() => fileInputRef.current?.click()}>
+              Agregar foto
+            </IonButton>
+          </>
+        )}
+
+        {photos.length > 0 && (
+          <div style={{ marginTop: "15px" }}>
+            {photos.map((p, i) => (
+              <img
+                key={i}
+                src={p}
+                alt="audit"
+                style={{ width: "100%", marginBottom: "10px", borderRadius: "8px" }}
+              />
+            ))}
+          </div>
+        )}
       </IonCardContent>
     </IonCard>
   );
