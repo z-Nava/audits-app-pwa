@@ -12,13 +12,32 @@ export interface Person {
   email: string;
 }
 
+export interface Tool {
+  id: number;
+  name: string;
+  code: string;
+  model?: string;
+  description?: string;
+}
+
 export interface Assignment {
   id: number;
-  supervisor_id: number;
-  technician_id: number;
-  line_id: number;
+  notes?: string;
   shift: string;
   status: string;
+  line: {
+    id: number;
+    name: string;
+    code: string;
+  };
+  tools?: Tool[];
+}
+
+export interface AuditItem {
+  id: number;
+  tool_id: number;
+  result: string;
+  comments?: string;
 }
 
 export interface Audit {
@@ -42,6 +61,8 @@ export interface Audit {
   technician: Person;
   supervisor: Person;
   line: Line;
+  
+   items?: AuditItem[];
 }
 
 export interface AuditListResponse {

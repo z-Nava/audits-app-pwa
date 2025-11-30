@@ -31,7 +31,7 @@ const Login: React.FC = () => {
 
       loginStore(token, user);
       console.log("Login exitoso, token almacenado.");
-      window.location.href = "/audits";
+      window.location.href = "/assignments";
       
     } catch (err) {
       setError("Credenciales incorrectas o error de conexión");

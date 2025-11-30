@@ -1,72 +1,116 @@
 import React, { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
-import {
-  IonPage,
-  IonContent,
-  IonHeader,
-  IonToolbar,
-  IonTitle,
-  IonList,
-  IonItem,
-  IonLabel,
-  IonBadge,
-  IonSpinner
-} from "@ionic/react";
-
-import { Audit } from "../../types/audits";
+import { IonPage, IonContent, IonButton, IonText, IonItem, IonLabel, IonSelect, IonSelectOption, IonTextarea } from "@ionic/react";
 import { AuditService } from "../../services/AuditService";
+import { useParams } from "react-router-dom";
+import type { Audit, Tool } from "../../types/audits";
 
 const AuditDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
-  const [audit, setAudit] = useState<Audit | null>(null);
-  const [loading, setLoading] = useState(true);
+  const auditId = Number(id);
 
-  useEffect(() => {
-    async function load() {
-      try {
-        const data = await AuditService.get(Number(id));
-        setAudit(data);
-      } finally {
-        setLoading(false);
-      }
+  const [audit, setAudit] = useState<Audit | null>(null);
+  const [itemId, setItemId] = useState<number | null>(null);
+  const [result, setResult] = useState("PASS");
+  const [comments, setComments] = useState("");
+
+  async function loadAudit() {
+    const data = await AuditService.getAudit(auditId);
+    setAudit(data);
+    if (data.items?.length) {
+      const item = data.items[0];
+      setItemId(item.id);
+      setResult(item.result);
+      setComments(item.comments || "");
+    }
+  }
+
+  async function createItem() {
+    if (!audit) return;
+    const tool: Tool | undefined = audit.assignment.tools?.[0];
+    if (!tool) {
+      alert("No hay herramienta asignada.");
+      return;
     }
 
-    load();
-  }, [id]);
+    const item = await AuditService.createItem(audit.id, tool.id);
+    setItemId(item.id);
+    alert("Item creado");
+  }
+
+  async function saveItem() {
+    if (!itemId) return alert("Primero debes crear el item.");
+    await AuditService.updateItem(itemId, {
+      result,
+      comments,
+    });
+    alert("Guardado");
+  }
+
+  async function submitAudit() {
+    await AuditService.submitAudit(auditId);
+    alert("Auditoría enviada");
+    window.location.href = "/assignments";
+  }
+
+  useEffect(() => {
+    loadAudit();
+  }, []);
 
   return (
     <IonPage>
-      <IonHeader>
-        <IonToolbar>
-          <IonTitle>Detalle de Auditoría</IonTitle>
-        </IonToolbar>
-      </IonHeader>
-
       <IonContent className="ion-padding">
-
-        {loading && <IonSpinner />}
-
-        {!loading && !audit && <p>No se encontró la auditoría.</p>}
 
         {audit && (
           <>
-            <h2>{audit.audit_code}</h2>
-            <p><strong>Línea:</strong> {audit.line.name}</p>
-            <p><strong>Técnico:</strong> {audit.technician.name}</p>
-            <p><strong>Supervisor:</strong> {audit.supervisor.name}</p>
+            <h2>Auditoría {audit.audit_code}</h2>
+            <p>Línea: {audit.assignment.line.name}</p>
+            <p>Shift: {audit.shift}</p>
 
-            <IonBadge color={audit.status === "submitted" ? "danger" : "primary"}>
-              {audit.status}
-            </IonBadge>
+            {/* NOTAS */}
+            {audit.assignment.notes && (
+              <IonText color="medium">
+                <p><strong>Notas:</strong> {audit.assignment.notes}</p>
+              </IonText>
+            )}
 
-            <h3 style={{ marginTop: "20px" }}>Resumen</h3>
-            <p>{audit.summary || "Sin resumen"}</p>
+            {/* Crear ITEM */}
+            {!itemId && (
+              <IonButton onClick={createItem}>
+                Registrar resultado de herramienta
+              </IonButton>
+            )}
 
-            {/* Más adelante agregamos:
-                - Lista de ítems
-                - Botón para subir fotos
-                - Botón de submit
-                - Navegación */}
+            {/* FORMULARIO */}
+            {itemId && (
+              <>
+                <IonItem>
+                  <IonLabel>Resultado</IonLabel>
+                  <IonSelect
+                    value={result}
+                    onIonChange={(e) => setResult(e.detail.value)}
+                  >
+                    <IonSelectOption value="PASS">PASS</IonSelectOption>
+                    <IonSelectOption value="FAIL">FAIL</IonSelectOption>
+                  </IonSelect>
+                </IonItem>
+
+                <IonItem>
+                  <IonLabel position="stacked">Comentarios</IonLabel>
+                  <IonTextarea
+                    value={comments}
+                    onIonChange={(e) => setComments(e.detail.value!)}
+                  />
+                </IonItem>
+
+                <IonButton expand="block" onClick={saveItem}>
+                  Guardar resultado
+                </IonButton>
+
+                <IonButton color="success" expand="block" onClick={submitAudit}>
+                  Enviar Auditoría
+                </IonButton>
+              </>
+            )}
           </>
         )}
 
