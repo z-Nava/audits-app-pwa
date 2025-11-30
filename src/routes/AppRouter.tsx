@@ -4,35 +4,30 @@ import { IonRouterOutlet } from "@ionic/react";
 
 import Login from "../pages/Auth/Login";
 import Audits from "../pages/Audits/Audits";
+import AuditDetail from "../pages/Audits/AuditDetail";
+
 import useUserStore from "../store/userStore";
 
-const PrivateRoute = ({ component: Component, ...rest }: any) => {
+const AppRouter: React.FC = () => {
   const token = useUserStore((s) => s.token);
 
   return (
-    <Route
-      {...rest}
-      render={(props) =>
-        token ? <Component {...props} /> : <Redirect to="/login" />
-      }
-    />
-  );
-};
-
-const AppRouter: React.FC = () => {
-  return (
     <IonRouterOutlet>
+      <Route path="/login" exact>
+        <Login />
+      </Route>
 
-      {/* Ruta pública */}
-      <Route exact path="/login" component={Login} />
+      <Route path="/audits" exact>
+        {token ? <Audits /> : <Redirect to="/login" />}
+      </Route>
 
-      {/* Rutas protegidas */}
-      <PrivateRoute exact path="/audits" component={Audits} />
-      <PrivateRoute exact path="/audits/:id" component={Audits} />
+      <Route path="/audits/:id">
+        {token ? <AuditDetail /> : <Redirect to="/login" />}
+      </Route>
 
-      {/* Default */}
-      <Redirect exact from="/" to="/audits" />
-
+      <Route exact path="/">
+        <Redirect to="/audits" />
+      </Route>
     </IonRouterOutlet>
   );
 };
