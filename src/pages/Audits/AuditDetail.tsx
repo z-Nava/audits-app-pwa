@@ -1,3 +1,5 @@
+// src/pages/Audits/AuditDetail.tsx
+
 import React, { useEffect, useState } from "react";
 import {
   IonPage,
@@ -8,7 +10,6 @@ import {
 } from "@ionic/react";
 
 import { useParams } from "react-router-dom";
-
 import { Audit, AuditItem } from "../../types/audits";
 import { AuditService } from "../../services/AuditService";
 import api from "../../services/api";
@@ -25,7 +26,7 @@ const AuditDetail: React.FC = () => {
   const [photos, setPhotos] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
 
-  const isReadOnly = audit?.status !== "in_progress";
+  const readOnly = audit?.status !== "in_progress";
 
   async function loadAudit() {
     if (!id) return;
@@ -34,38 +35,32 @@ const AuditDetail: React.FC = () => {
     const data = await AuditService.getAudit(Number(id));
     setAudit(data);
 
-    // Si ya tiene item
     if (data.items && data.items.length > 0) {
-      const i = data.items[0];
-      setItem(i);
-
-      // cargar las fotos
-      const resp = await api.get(`/audit-items/${i.id}/photos`);
-      setPhotos(resp.data.map((p: any) => p.url));
+      setItem(data.items[0]);
     }
-
     setLoading(false);
   }
 
   async function createItem() {
-    if (!audit || isReadOnly) return;
-
+    if (!audit) return;
     const toolId = audit.assignment.tools![0].id;
+
     const newItem = await AuditService.createItem(audit.id, toolId);
     setItem(newItem);
   }
 
   async function saveItem() {
-    if (!item || isReadOnly) return;
-
+    if (!item) return;
     setLoading(true);
+
     const updated = await AuditService.updateItem(item.id, item);
     setItem(updated);
+
     setLoading(false);
   }
 
   async function addPhoto(file: File) {
-    if (!item || isReadOnly) return;
+    if (!item) return;
 
     const form = new FormData();
     form.append("photo", file);
@@ -74,11 +69,12 @@ const AuditDetail: React.FC = () => {
       headers: { "Content-Type": "multipart/form-data" },
     });
 
-    setPhotos([...photos, resp.data.url]);
+    const url = resp.data.url;
+    setPhotos([...photos, url]);
   }
 
   async function submitAudit() {
-    if (!audit || isReadOnly) return;
+    if (!audit) return;
 
     setLoading(true);
     await AuditService.submitAudit(audit.id);
@@ -101,51 +97,34 @@ const AuditDetail: React.FC = () => {
 
         {audit && (
           <>
-            {/* Header con datos del audit */}
-            <AuditHeader audit={audit} />
+            <AuditHeader audit={audit} readOnly={readOnly} />
 
-            {/* Tarjeta de herramienta */}
             <AuditToolCard
               tool={audit.assignment.tools![0]}
               itemExists={!!item}
-              onCreateItem={!isReadOnly ? createItem : undefined}
-              readOnly={isReadOnly}
+              onCreateItem={!readOnly ? createItem : undefined}
+              readOnly={readOnly}
             />
 
-            {/* Si el audit YA está enviado → mostrar mensaje */}
-            {isReadOnly && (
-              <IonText color="medium">
-                <p style={{ fontStyle: "italic", marginTop: "10px" }}>
-                  Esta auditoría fue enviada y está en estado: <strong>{audit.status}</strong>
-                </p>
-              </IonText>
-            )}
-
-            {/* Formulario del ítem */}
             {item && (
               <AuditItemForm
                 item={item}
-                readOnly={isReadOnly}
-                onChange={
-                  !isReadOnly
-                    ? (field, value) => setItem({ ...item, [field]: value })
-                    : undefined
-                }
-                onSave={!isReadOnly ? saveItem : undefined}
+                onChange={readOnly ? () => {} : (f, v) => setItem({ ...item, [f]: v })}
+                onSave={readOnly ? undefined : saveItem}
+                readOnly={readOnly}
               />
             )}
 
-            {/* Fotos */}
             {item && (
               <AuditPhotos
                 photos={photos}
-                onAddPhoto={!isReadOnly ? addPhoto : undefined}
-                readOnly={isReadOnly}
+                onAddPhoto={readOnly ? undefined : addPhoto}
+                readOnly={readOnly}
               />
             )}
 
-            {/* Botón enviar → solo si puede */}
-            {!isReadOnly && item && (
+            {/* Solo mostrar botón si es editable */}
+            {!readOnly && item && (
               <IonButton
                 expand="block"
                 color="success"
@@ -154,6 +133,15 @@ const AuditDetail: React.FC = () => {
               >
                 ENVIAR AUDITORÍA
               </IonButton>
+            )}
+
+            {/* Mensaje de estado */}
+            {readOnly && (
+              <IonText color="medium">
+                <p style={{ marginTop: "20px", textAlign: "center" }}>
+                  Auditoría en estado: <strong>{audit.status.toUpperCase()}</strong>
+                </p>
+              </IonText>
             )}
           </>
         )}

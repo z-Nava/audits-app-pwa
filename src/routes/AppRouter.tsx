@@ -27,6 +27,11 @@ const AppRouter: React.FC = () => {
         {token ? <AuditDetail /> : <Redirect to="/login" />}
       </Route>
 
+      <Route path="/audit/:id" exact>
+        {token ? <AuditDetail /> : <Redirect to="/login" />}
+      </Route>
+
+
       <Route path="/audits/:id/items" exact>
         {token ? <AuditItems /> : <Redirect to="/login" />}
       </Route>

@@ -6,6 +6,7 @@ import { Audit } from "../../../types/audits";
 
 interface Props {
   audit: Audit;
+  readOnly?: boolean;
 }
 
 const AuditHeader: React.FC<Props> = ({ audit }) => {
