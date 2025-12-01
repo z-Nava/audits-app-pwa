@@ -1,6 +1,7 @@
 // src/pages/Audits/components/AuditPhotos.tsx
+
 import React, { useRef } from "react";
-import { IonCard, IonCardContent, IonButton } from "@ionic/react";
+import { IonButton } from "@ionic/react";
 
 interface Props {
   photos: string[];
@@ -17,40 +18,42 @@ const AuditPhotos: React.FC<Props> = ({ photos, onAddPhoto, readOnly }) => {
   }
 
   return (
-    <IonCard>
-      <IonCardContent>
-        <h2>Fotografías</h2>
+    <div>
+      <h2 className="text-lg font-semibold mb-3">Fotografías</h2>
 
-        {!readOnly && (
-          <>
-            <input
-              type="file"
-              ref={fileInputRef}
-              hidden
-              accept="image/*"
-              onChange={handleFileSelect}
+      {!readOnly && (
+        <>
+          <input
+            type="file"
+            ref={fileInputRef}
+            hidden
+            accept="image/*"
+            onChange={handleFileSelect}
+          />
+
+          <IonButton
+            expand="block"
+            className="bg-primaryRed text-white font-bold rounded-xl mb-4"
+            onClick={() => fileInputRef.current?.click()}
+          >
+            Agregar foto
+          </IonButton>
+        </>
+      )}
+
+      {photos.length > 0 && (
+        <div className="grid grid-cols-1 gap-3">
+          {photos.map((p, i) => (
+            <img
+              key={i}
+              src={p}
+              alt="audit"
+              className="w-full rounded-lg object-cover"
             />
-
-            <IonButton expand="block" onClick={() => fileInputRef.current?.click()}>
-              Agregar foto
-            </IonButton>
-          </>
-        )}
-
-        {photos.length > 0 && (
-          <div style={{ marginTop: "15px" }}>
-            {photos.map((p, i) => (
-              <img
-                key={i}
-                src={p}
-                alt="audit"
-                style={{ width: "100%", marginBottom: "10px", borderRadius: "8px" }}
-              />
-            ))}
-          </div>
-        )}
-      </IonCardContent>
-    </IonCard>
+          ))}
+        </div>
+      )}
+    </div>
   );
 };
 

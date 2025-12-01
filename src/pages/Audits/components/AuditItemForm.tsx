@@ -1,17 +1,7 @@
 // src/pages/Audits/components/AuditItemForm.tsx
 
 import React from "react";
-import {
-  IonCard,
-  IonCardContent,
-  IonItem,
-  IonLabel,
-  IonSelect,
-  IonSelectOption,
-  IonTextarea,
-  IonButton,
-} from "@ionic/react";
-
+import { IonItem, IonLabel, IonTextarea, IonButton } from "@ionic/react";
 import { AuditItem } from "../../../types/audits";
 
 interface Props {
@@ -21,67 +11,56 @@ interface Props {
   readOnly?: boolean;
 }
 
-const AuditItemForm: React.FC<Props> = ({ item, onChange, onSave, readOnly }) => {
+const AuditItemForm: React.FC<Props> = ({
+  item,
+  onChange,
+  onSave,
+  readOnly,
+}) => {
   return (
-    <IonCard>
-      <IonCardContent>
-        <h2>Resultado</h2>
+    <div>
+      {/* Comentarios */}
+      <IonItem lines="none">
+        <IonLabel position="stacked">Comentarios</IonLabel>
+      </IonItem>
+      <IonTextarea
+        value={item.comments ?? ""}
+        disabled={readOnly}
+        autoGrow
+        onIonChange={(e) =>
+          onChange && onChange("comments", e.detail.value || "")
+        }
+        className="mt-1"
+      />
 
-        {/* RESULT */}
-        <IonItem>
-          <IonLabel>Resultado</IonLabel>
-
-          <IonSelect
-            value={item.result}
+      {/* Defectos solo si FAIL */}
+      {item.result === "FAIL" && (
+        <>
+          <IonItem lines="none" className="mt-3">
+            <IonLabel position="stacked">Defectos</IonLabel>
+          </IonItem>
+          <IonTextarea
+            value={item.defects ?? ""}
             disabled={readOnly}
-            onIonChange={(e) => onChange && onChange("result", e.detail.value)}
-          >
-            <IonSelectOption value="PASS">PASS</IonSelectOption>
-            <IonSelectOption value="FAIL">FAIL</IonSelectOption>
-            <IonSelectOption value="NA">N/A</IonSelectOption>
-          </IonSelect>
-        </IonItem>
+            autoGrow
+            onIonChange={(e) =>
+              onChange && onChange("defects", e.detail.value || "")
+            }
+          />
+        </>
+      )}
 
-        {/* COMENTARIOS */}
-        <IonItem lines="none">
-          <IonLabel position="stacked">Comentarios</IonLabel>
-        </IonItem>
-
-        <IonTextarea
-          value={item.comments ?? ""}
-          disabled={readOnly}
-          autoGrow
-          onIonChange={(e) => onChange && onChange("comments", e.detail.value)}
-        />
-
-        {/* DEFECTOS (solo si FAIL) */}
-        {item.result === "FAIL" && (
-          <>
-            <IonItem lines="none" style={{ marginTop: "12px" }}>
-              <IonLabel position="stacked">Defectos</IonLabel>
-            </IonItem>
-
-            <IonTextarea
-              value={item.defects ?? ""}
-              disabled={readOnly}
-              autoGrow
-              onIonChange={(e) => onChange && onChange("defects", e.detail.value)}
-            />
-          </>
-        )}
-
-        {/* BOTÓN GUARDAR */}
-        {!readOnly && onSave && (
-          <IonButton
-            expand="block"
-            style={{ marginTop: "15px" }}
-            onClick={onSave}
-          >
-            Guardar Resultado
-          </IonButton>
-        )}
-      </IonCardContent>
-    </IonCard>
+      {/* Botón guardar */}
+      {!readOnly && onSave && (
+        <IonButton
+          expand="block"
+          className="mt-4 bg-primaryRed text-white font-bold rounded-xl"
+          onClick={onSave}
+        >
+          Guardar resultado
+        </IonButton>
+      )}
+    </div>
   );
 };
 

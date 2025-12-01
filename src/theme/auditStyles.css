@@ -1,0 +1,76 @@
+/* ===========================
+    DISEÑO GENERAL MILWAUKEE
+=========================== */
+:root {
+  --primary-red: #C8102E;
+  --dark-bg: #0d0d0d;
+  --card-bg: #1A1A1A;
+  --text-light: #fff;
+}
+
+body,
+.ion-page,
+.audits-bg {
+  background: var(--dark-bg);
+  color: var(--text-light);
+  font-family: 'Poppins', sans-serif;
+}
+
+/* ===========================
+    TITULOS
+=========================== */
+.title-primary {
+  font-size: 26px;
+  font-weight: 800;
+  text-transform: uppercase;
+  margin-bottom: 18px;
+  color: var(--text-light);
+  border-left: 6px solid var(--primary-red);
+  padding-left: 10px;
+}
+
+/* ===========================
+    AUDIT CARDS
+=========================== */
+.card-audit {
+  background: var(--card-bg);
+  border-radius: 18px;
+  border: 1px solid rgba(200, 16, 46, 0.3);
+  transition: 0.2s ease-in-out;
+}
+
+.card-audit:hover {
+  transform: translateY(-4px);
+  box-shadow: 0px 0px 20px rgba(200,16,46,0.25);
+}
+
+/* Texto y chips */
+.audit-title {
+  font-size: 18px;
+  font-weight: bold;
+}
+
+.audit-info {
+  opacity: .8;
+  margin-bottom: 8px;
+}
+
+.result-chip,
+.chip-status {
+  font-weight: bold;
+  text-transform: uppercase;
+}
+
+/* Button */
+ion-button {
+  --background: var(--primary-red);
+  font-weight: bold;
+  border-radius: 14px;
+}
+
+/* Center util class */
+.center {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}

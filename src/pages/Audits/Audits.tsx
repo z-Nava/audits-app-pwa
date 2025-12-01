@@ -1,3 +1,5 @@
+// src/pages/Audits/Audits.tsx
+
 import React, { useEffect, useState } from "react";
 import {
   IonPage,
@@ -7,12 +9,15 @@ import {
   IonChip,
   IonIcon,
   IonLabel,
-  IonButton,
-  IonText,
   IonSpinner,
+  IonText,
 } from "@ionic/react";
 
-import { documentTextOutline, ribbonOutline, businessOutline } from "ionicons/icons";
+import {
+  documentTextOutline,
+  businessOutline,
+  ribbonOutline,
+} from "ionicons/icons";
 import { Audit } from "../../types/audits";
 import { AuditService } from "../../services/AuditService";
 
@@ -32,88 +37,86 @@ const Audits: React.FC = () => {
     load();
   }, []);
 
-  function StatusChip(status: string) {
-    if (status === "submitted")
-      return <IonChip color="warning"><IonLabel>En revisión</IonLabel></IonChip>;
+  const statusChip = (status: string) => {
+    const map: Record<
+      string,
+      { color: string; label: string }
+    > = {
+      submitted: { color: "warning", label: "En revisión" },
+      reviewed: { color: "medium", label: "Revisada" },
+      closed: { color: "success", label: "Cerrada" },
+    };
+    const data = map[status] || { color: "dark", label: status };
 
-    if (status === "reviewed")
-      return <IonChip color="tertiary"><IonLabel>Revisada</IonLabel></IonChip>;
-
-    if (status === "closed")
-      return <IonChip color="success"><IonLabel>Cerrada</IonLabel></IonChip>;
-
-    return <IonChip color="medium"><IonLabel>{status}</IonLabel></IonChip>;
-  }
+    return (
+      <IonChip className="chip-status" color={data.color}>
+        <IonLabel>{data.label}</IonLabel>
+      </IonChip>
+    );
+  };
 
   return (
     <IonPage>
-      <IonContent className="ion-padding">
+      <IonContent className="audits-bg ion-padding">
+        <h1 className="title-primary">Mis Auditorías</h1>
 
-        <h1 style={{ fontWeight: 700, marginBottom: "20px" }}>
-          Mis Auditorías
-        </h1>
-
-        {/* Loader */}
         {loading && (
-          <div className="flex justify-center mt-6">
-            <IonSpinner name="crescent" />
+          <div className="center mt-6">
+            <IonSpinner color="light" name="crescent" />
           </div>
         )}
 
-        {/* Si no hay auditorías */}
         {!loading && audits.length === 0 && (
-          <IonText color="medium">
-            <p style={{ textAlign: "center", marginTop: "30px" }}>
-              No tienes auditorías registradas.
+          <IonText color="light">
+            <p className="center mt-6 opacity-80">
+              No tienes auditorías asignadas.
             </p>
           </IonText>
         )}
 
-        {/* LISTA DE AUDITORÍAS */}
         {!loading &&
           audits.map((a) => (
             <IonCard
               key={a.id}
               button
               routerLink={`/audits/${a.id}`}
-              style={{ borderRadius: "16px", marginBottom: "16px" }}
+              className="card-audit"
             >
               <IonCardContent>
+                <div className="flex justify-between items-center mb-2">
+                  <h2 className="audit-title flex items-center">
+                    <IonIcon
+                      icon={documentTextOutline}
+                      className="mr-2 text-red-500"
+                    />
+                    {a.audit_code}
+                  </h2>
 
-                {/* CÓDIGO DE AUDITORÍA */}
-                <h2 style={{ fontSize: "20px", fontWeight: 600, marginBottom: "8px" }}>
-                  <IonIcon icon={documentTextOutline} style={{ marginRight: "8px" }} />
-                  {a.audit_code}
-                </h2>
+                  {a.overall_result && (
+                    <IonChip
+                      className="result-chip"
+                      color={
+                        a.overall_result === "PASS" ? "success" : "danger"
+                      }
+                    >
+                      <IonIcon icon={ribbonOutline} />
+                      <IonLabel>{a.overall_result}</IonLabel>
+                    </IonChip>
+                  )}
+                </div>
 
-                {/* LÍNEA */}
-                <p style={{ fontSize: "15px", marginBottom: "10px" }}>
+                <p className="audit-info flex items-center">
                   <IonIcon
                     icon={businessOutline}
-                    style={{ marginRight: "8px", opacity: 0.7 }}
+                    className="mr-1 opacity-70"
                   />
                   {a.line?.name}
                 </p>
 
-                {/* ESTADO */}
-                {StatusChip(a.status)}
-
-                {/* RESULTADO */}
-                {a.overall_result && (
-                  <IonChip
-                    color={a.overall_result === "PASS" ? "success" : "danger"}
-                    style={{ marginLeft: "10px" }}
-                  >
-                    <IonIcon icon={ribbonOutline} />
-                    <IonLabel>{a.overall_result}</IonLabel>
-                  </IonChip>
-                )}
-
+                {statusChip(a.status)}
               </IonCardContent>
             </IonCard>
-          ))
-        }
-
+          ))}
       </IonContent>
     </IonPage>
   );

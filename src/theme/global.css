@@ -1,0 +1,84 @@
+/* 🔥 ESTILO MILWAUKEE 🔥 */
+body, ion-content {
+  font-family: "Poppins", sans-serif;
+  background: var(--dark-bg) !important;
+}
+
+/* Títulos */
+.title-primary {
+  font-size: 24px;
+  font-weight: 800;
+  color: var(--text-light);
+  margin-bottom: 18px;
+}
+
+/* Tarjetas generales */
+.card-audit {
+  background: var(--card-bg) !important;
+  border-radius: 18px !important;
+  padding: 4px;
+  border: 1px solid var(--border-soft) !important;
+  transition: transform .15s ease-in-out;
+}
+
+.card-audit:hover {
+  transform: translateY(-3px);
+  border-color: var(--primary-red);
+}
+
+/* Chips */
+.chip-status {
+  height: 26px;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+/* Botones principales */
+.btn-main {
+  background: var(--primary-red);
+  color: white;
+  font-weight: bold;
+  height: 46px;
+  border-radius: 12px;
+}
+
+/* Inputs */
+.custom-input {
+  background: #111;
+  color: var(--text-light);
+  border: 1px solid var(--border-soft);
+  border-radius: 10px;
+  padding: 10px;
+}
+
+/* Botones de PASS / FAIL / N/A */
+.result-btn {
+  width: 32%;
+  height: 48px;
+  border-radius: 12px;
+  font-weight: 700;
+  color: white;
+  background: #111;
+  border: 1px solid var(--border-soft);
+  transition: .15s;
+}
+
+.result-btn.active-pass {
+  background: #0b8b24 !important;
+  border: none;
+}
+
+.result-btn.active-fail {
+  background: #b20000 !important;
+  border: none;
+}
+
+.result-btn.active-na {
+  background: #444 !important;
+  border: none;
+}
+
+.result-btn:not(.disabled):active {
+  transform: scale(.96);
+}

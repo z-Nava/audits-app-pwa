@@ -3,9 +3,11 @@
   <head>
     <meta charset="utf-8" />
     <title>Ionic App</title>
-    
+    <!-- TailwindCSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
     <base href="/" />
-    
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;500;700;800&display=swap" rel="stylesheet">
     <meta name="color-scheme" content="light dark" />
     <meta
       name="viewport"
@@ -25,6 +27,22 @@
   </head>
   <body>
     <div id="root"></div>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              primaryRed: "#C8102E",
+              darkBg: "#111",
+            },
+            fontFamily: {
+              poppins: ["Poppins", "sans-serif"],
+            },
+          },
+        },
+      };
+    </script>
+
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

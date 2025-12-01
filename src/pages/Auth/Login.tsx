@@ -13,7 +13,7 @@ import {
   IonCardContent,
 } from "@ionic/react";
 
-import { personCircleOutline, lockClosedOutline } from "ionicons/icons";
+import { personCircleOutline, mailOutline, lockClosedOutline } from "ionicons/icons";
 import useUserStore from "../../store/userStore";
 import { AuthService } from "../../services/AuthService";
 
@@ -43,9 +43,14 @@ const Login: React.FC = () => {
 
   return (
     <IonPage>
-      <IonContent fullscreen className="ion-padding" color="light">
-
-        {/* CONTENEDOR CENTRADO */}
+      <IonContent
+        fullscreen
+        className="ion-padding"
+        style={{
+          fontFamily: "Poppins, sans-serif",
+          background: "linear-gradient(180deg, #000 0%, #1A1A1A 100%)",
+        }}
+      >
         <div
           style={{
             display: "flex",
@@ -59,82 +64,109 @@ const Login: React.FC = () => {
               width: "100%",
               maxWidth: "380px",
               borderRadius: "20px",
-              padding: "4px",
-              boxShadow: "0px 8px 20px rgba(0,0,0,0.15)",
+              background: "#111",
+              padding: "10px",
+              boxShadow: "0px 0px 25px rgba(200,16,46,0.55)",
             }}
           >
             <IonCardContent>
 
-              {/* ICONO */}
-              <div style={{ textAlign: "center", marginBottom: "12px" }}>
+              {/* ICON */}
+              <div style={{ textAlign: "center", marginBottom: "16px" }}>
                 <IonIcon
                   icon={personCircleOutline}
-                  style={{ fontSize: "70px", color: "#3b82f6" }}
+                  style={{ fontSize: "85px", color: "#fff" }}
                 />
               </div>
 
-              {/* TÍTULO */}
+              {/* TITLE */}
               <h2
                 style={{
                   textAlign: "center",
-                  fontWeight: 700,
-                  color: "#1e293b",
-                  marginBottom: "24px",
+                  fontWeight: "800",
+                  fontSize: "24px",
+                  color: "#fff",
+                  marginBottom: "35px",
+                  textTransform: "uppercase",
                 }}
               >
-                Iniciar sesión
+                Acceso
               </h2>
 
               {/* INPUT LOGIN */}
-              <IonItem lines="full">
-                <IonLabel position="stacked">Número de empleado o email</IonLabel>
+              <IonItem
+                lines="none"
+                style={{
+                  "--padding-start": "0px",
+                  "--padding-end": "0px",
+                  marginBottom: "25px",
+                  borderBottom: "2px solid #4b4b4b",
+                }}
+                className="input-focused"
+              >
+                <IonIcon slot="start" icon={mailOutline} style={{ color: "#aaa", marginRight: "10px" }} />
+                <IonLabel style={{ color: "#aaa" }} position="floating">
+                  Usuario o Email
+                </IonLabel>
                 <IonInput
-                  value={loginField}
+                  style={{ color: "#fff" }}
                   placeholder="TEC2001"
+                  value={loginField}
                   onIonChange={(e) => setLoginField(e.detail.value!)}
                 />
               </IonItem>
 
               {/* INPUT PASSWORD */}
-              <IonItem lines="full" style={{ marginTop: "16px" }}>
-                <IonLabel position="stacked">Contraseña</IonLabel>
+              <IonItem
+                lines="none"
+                style={{
+                  "--padding-start": "0px",
+                  "--padding-end": "0px",
+                  marginBottom: "10px",
+                  borderBottom: "2px solid #4b4b4b",
+                }}
+              >
+                <IonIcon slot="start" icon={lockClosedOutline} style={{ color: "#aaa", marginRight: "10px" }} />
+                <IonLabel style={{ color: "#aaa" }} position="floating">
+                  Contraseña
+                </IonLabel>
                 <IonInput
                   type="password"
+                  style={{ color: "#fff" }}
                   placeholder="••••••••"
                   value={password}
                   onIonChange={(e) => setPassword(e.detail.value!)}
                 />
               </IonItem>
 
-              {/* ERROR MESSAGE */}
               {error && (
                 <IonText color="danger">
-                  <p style={{ marginTop: "10px", textAlign: "center" }}>
-                    {error}
-                  </p>
+                  <p style={{ textAlign: "center", marginTop: "5px" }}>{error}</p>
                 </IonText>
               )}
 
-              {/* BOTÓN LOGIN */}
+              {/* BUTTON */}
               <IonButton
                 expand="block"
                 style={{
-                  marginTop: "24px",
-                  height: "48px",
+                  marginTop: "30px",
+                  height: "50px",
                   borderRadius: "14px",
+                  fontWeight: "700",
+                  "--background": "#C8102E",
+                  letterSpacing: "1px",
                   fontSize: "16px",
-                  fontWeight: 600,
+                  textTransform: "uppercase",
                 }}
                 disabled={loading}
                 onClick={handleLogin}
               >
-                {loading ? <IonSpinner name="crescent" /> : "Entrar"}
+                {loading ? <IonSpinner /> : "Entrar"}
               </IonButton>
 
             </IonCardContent>
           </IonCard>
         </div>
-
       </IonContent>
     </IonPage>
   );

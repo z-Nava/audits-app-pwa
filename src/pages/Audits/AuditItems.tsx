@@ -2,7 +2,6 @@
 
 import React, { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-
 import {
   IonPage,
   IonContent,
@@ -17,7 +16,6 @@ import {
   IonCard,
   IonCardContent,
   IonIcon,
-  IonText
 } from "@ionic/react";
 
 import { constructOutline, clipboardOutline } from "ionicons/icons";
@@ -44,8 +42,8 @@ const AuditItems: React.FC = () => {
   if (loading) {
     return (
       <IonPage>
-        <IonContent className="ion-padding flex justify-center items-center">
-          <IonSpinner name="crescent" />
+        <IonContent className="ion-padding bg-darkBg text-white flex justify-center items-center">
+          <IonSpinner name="crescent" color="light" />
         </IonContent>
       </IonPage>
     );
@@ -54,10 +52,10 @@ const AuditItems: React.FC = () => {
   if (!audit) {
     return (
       <IonPage>
-        <IonContent className="ion-padding">
-          <IonText color="danger">
-            <h3>No se encontró la auditoría.</h3>
-          </IonText>
+        <IonContent className="ion-padding bg-darkBg text-white flex justify-center items-center">
+          <p className="text-center text-red-500 font-bold text-lg">
+            No se encontró la auditoría.
+          </p>
         </IonContent>
       </IonPage>
     );
@@ -67,51 +65,53 @@ const AuditItems: React.FC = () => {
 
   return (
     <IonPage>
-
-      {/* HEADER */}
       <IonHeader>
-        <IonToolbar color="primary">
-          <IonTitle>Elementos a evaluar</IonTitle>
+        <IonToolbar className="bg-black text-white">
+          <IonTitle className="font-bold uppercase tracking-wide">
+            Elementos a evaluar
+          </IonTitle>
         </IonToolbar>
       </IonHeader>
 
-      <IonContent className="ion-padding">
-
-        {/* TARJETA CON INFORMACIÓN GENERAL */}
-        <IonCard style={{ borderRadius: "16px", marginBottom: "14px" }}>
+      <IonContent className="ion-padding bg-darkBg text-white font-poppins">
+        {/* Tarjeta info de auditoría */}
+        <IonCard className="bg-[#1A1A1A] border border-primaryRed/40 rounded-2xl shadow-md mb-4">
           <IonCardContent>
-
-            <div style={{ display: "flex", alignItems: "center", marginBottom: "12px" }}>
-              <IonIcon icon={clipboardOutline} style={{ fontSize: "28px", marginRight: "10px", color: "#1e40af" }} />
-              <h2 style={{ margin: 0, fontWeight: 700 }}>Auditoría {audit.audit_code}</h2>
+            <div className="flex items-center gap-3 mb-4">
+              <IonIcon
+                icon={clipboardOutline}
+                className="text-primaryRed text-3xl"
+              />
+              <h2 className="font-bold text-lg">
+                Auditoría {audit.audit_code}
+              </h2>
             </div>
 
-            <p style={{ margin: "4px 0", fontSize: "15px" }}>
-              <strong>Línea:</strong> {audit.line.name}
+            <p className="text-sm mb-1">
+              <span className="font-bold">Línea:</span> {audit.line.name}
             </p>
-
-            <p style={{ margin: "4px 0", fontSize: "15px" }}>
-              <strong>Turno:</strong> {audit.shift}
+            <p className="text-sm mb-1">
+              <span className="font-bold">Turno:</span> {audit.shift}
             </p>
-
-            <p style={{ margin: "4px 0", fontSize: "15px" }}>
-              <strong>Estado:</strong>{" "}
-              <span style={{ textTransform: "uppercase" }}>{audit.status}</span>
+            <p className="text-sm mb-1">
+              <span className="font-bold">Estado:</span>{" "}
+              <span className="uppercase text-primaryRed font-bold">
+                {audit.status}
+              </span>
             </p>
-
           </IonCardContent>
         </IonCard>
 
-        {/* LISTA DE HERRAMIENTAS */}
-        <h3 style={{ marginBottom: "10px", fontWeight: 600, fontSize: "18px" }}>
+        {/* Lista de herramientas */}
+        <h3 className="mt-4 mb-3 font-semibold text-lg uppercase text-primaryRed flex items-center gap-2">
           Herramientas asociadas
         </h3>
 
-        <IonList>
+        <IonList className="bg-transparent">
           {tools.length === 0 && (
-            <IonText color="medium">
-              <p>No hay herramientas asignadas a esta auditoría.</p>
-            </IonText>
+            <p className="text-gray-400 text-sm">
+              No hay herramientas asignadas.
+            </p>
           )}
 
           {tools.map((tool: any) => (
@@ -119,37 +119,30 @@ const AuditItems: React.FC = () => {
               key={tool.id}
               button
               routerLink={`/audits/${audit.id}/items/${tool.id}`}
-              style={{ borderRadius: "12px", marginBottom: "8px" }}
+              className="bg-[#111] rounded-xl my-2 border border-primaryRed/20 hover:border-primaryRed transition-colors duration-200"
             >
               <IonIcon
                 icon={constructOutline}
                 slot="start"
-                style={{ fontSize: "24px", marginRight: "6px", color: "#3b82f6" }}
+                className="text-primaryRed text-2xl"
               />
-
               <IonLabel>
-                <h2 style={{ margin: 0, fontWeight: 600 }}>{tool.name}</h2>
-                <p style={{ margin: 0, fontSize: "14px" }}>{tool.code}</p>
+                <h2 className="font-bold text-white">{tool.name}</h2>
+                <p className="text-gray-400 text-sm">{tool.code}</p>
               </IonLabel>
             </IonItem>
           ))}
         </IonList>
 
-        {/* BOTÓN ENVIAR */}
         <IonButton
           expand="block"
-          style={{
-            marginTop: "25px",
-            height: "50px",
-            borderRadius: "14px",
-            fontWeight: 600,
-          }}
+          className={`mt-8 h-12 rounded-xl font-bold tracking-wide ${
+            audit.status === "submitted" ? "bg-gray-600" : "bg-primaryRed"
+          }`}
           disabled={audit.status === "submitted"}
-          color={audit.status === "submitted" ? "medium" : "success"}
         >
           Enviar auditoría
         </IonButton>
-
       </IonContent>
     </IonPage>
   );

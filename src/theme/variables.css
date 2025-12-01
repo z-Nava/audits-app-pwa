@@ -1,2 +1,16 @@
 /* For information on how to create your own theme, please refer to:
 http://ionicframework.com/docs/theming/ */
+:root {
+  --primary-red: #d6001c;
+  --dark-bg: #0d0d0d;
+  --card-bg: #1a1a1a;
+  --text-light: #ffffff;
+  --text-gray: #b3b3b3;
+  --border-soft: rgba(214, 0, 28, 0.4);
+
+  --ion-background-color: var(--dark-bg);
+  --ion-text-color: var(--text-light);
+
+  --ion-color-primary: var(--primary-red);
+  --ion-color-primary-contrast: #ffffff;
+}
