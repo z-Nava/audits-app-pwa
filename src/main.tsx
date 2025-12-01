@@ -17,5 +17,13 @@ import "./theme/variables.css"; // si ya lo tienes
 
 const rootElement = document.getElementById("root")!;
 const root = createRoot(rootElement);
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("/service-worker.js")
+      .then(() => console.log("SW registrado", navigator.serviceWorker))
+      .catch((err) => console.error("SW ERROR:", err));
+  });
+}
+
 
 root.render(<App />);
