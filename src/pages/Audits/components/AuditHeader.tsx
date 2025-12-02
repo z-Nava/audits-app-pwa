@@ -1,8 +1,10 @@
 // src/pages/Audits/components/AuditHeader.tsx
 
 import React from "react";
-import { IonCard, IonCardContent } from "@ionic/react";
+import { IonCard, IonCardContent, IonButton, IonIcon } from "@ionic/react";
 import { Audit } from "../../../types/audits";
+import { arrowBackOutline } from "ionicons/icons";
+import { useHistory } from "react-router-dom";
 
 interface Props {
   audit: Audit;
@@ -10,10 +12,25 @@ interface Props {
 }
 
 const AuditHeader: React.FC<Props> = ({ audit }) => {
+  const history = useHistory();
+
   return (
     <IonCard className="bg-[#1A1A1A] border border-primaryRed/40 rounded-2xl shadow-md">
       <IonCardContent>
-        <h2 className="font-bold text-lg mb-2">Auditoría</h2>
+
+        {/* 🔥 Botón regresar */}
+        <div className="flex justify-between items-center mb-3">
+          <h2 className="font-bold text-lg">Auditoría</h2>
+
+          <IonButton
+            size="small"
+            fill="clear"
+            onClick={() => history.goBack()}
+            className="text-primaryRed"
+          >
+            <IonIcon icon={arrowBackOutline} className="text-xl" />
+          </IonButton>
+        </div>
 
         <p className="text-sm mb-1">
           <span className="font-bold">Código:</span> {audit.audit_code}
