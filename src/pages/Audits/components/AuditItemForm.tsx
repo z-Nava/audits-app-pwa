@@ -32,24 +32,7 @@ const AuditItemForm: React.FC<Props> = ({
         }
         className="mt-1"
       />
-
-      {/* Defectos solo si FAIL */}
-      {item.result === "FAIL" && (
-        <>
-          <IonItem lines="none" className="mt-3">
-            <IonLabel position="stacked">Defectos</IonLabel>
-          </IonItem>
-          <IonTextarea
-            value={item.defects ?? ""}
-            disabled={readOnly}
-            autoGrow
-            onIonChange={(e) =>
-              onChange && onChange("defects", e.detail.value || "")
-            }
-          />
-        </>
-      )}
-
+      
       {/* Botón guardar */}
       {!readOnly && onSave && (
         <IonButton
