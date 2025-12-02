@@ -18,6 +18,7 @@ import {
   timeOutline,
   eyeOutline,
   playOutline,
+  logOutOutline, // 🔥 icono logout
 } from "ionicons/icons";
 
 import api from "../../services/api";
@@ -38,6 +39,8 @@ interface AssignmentWithAudit extends Assignment {
 
 const Assignments: React.FC = () => {
   const user = useUserStore((s) => s.user);
+  const clearUser = useUserStore((s) => s.logout); // 🔥 función logout
+
   const [assignments, setAssignments] = useState<AssignmentWithAudit[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -77,6 +80,12 @@ const Assignments: React.FC = () => {
     }
   }
 
+  function logout() {
+    clearUser(); // limpia store
+    localStorage.removeItem("token"); // por si lo usas
+    window.location.href = "/login"; // redirige
+  }
+
   useEffect(() => {
     fetchAssignments();
   }, []);
@@ -84,9 +93,23 @@ const Assignments: React.FC = () => {
   return (
     <IonPage>
       <IonContent className="ion-padding bg-darkBg text-white font-poppins">
-        <h1 className="text-2xl font-extrabold mb-5 uppercase tracking-wide text-primaryRed">
-          Mis Asignaciones
-        </h1>
+
+        {/* 🔥 Header con Logout */}
+        <div className="flex justify-between items-center mb-4">
+          <h1 className="text-2xl font-extrabold uppercase tracking-wide text-primaryRed">
+            Mis Asignaciones
+          </h1>
+
+          <IonButton
+            size="small"
+            color="danger"
+            className="rounded-lg"
+            onClick={logout}
+          >
+            <IonIcon icon={logOutOutline} slot="start" />
+            Logout
+          </IonButton>
+        </div>
 
         {/* Loading / Vacio */}
         {loading && <IonText>Cargando asignaciones...</IonText>}
@@ -101,29 +124,24 @@ const Assignments: React.FC = () => {
               className="bg-[#1A1A1A] rounded-2xl shadow-lg border border-primaryRed/30 mb-4"
             >
               <IonCardContent className="text-white">
-                {/* Título */}
+
                 <div className="flex items-center gap-2 mb-2">
                   <IonIcon icon={constructOutline} className="text-primaryRed text-xl" />
                   <h2 className="text-xl font-bold">{a.line.name}</h2>
                 </div>
 
-                {/* Turno y notas */}
                 <div className="mb-3">
-                  <IonChip
-                    className="bg-primaryRed text-white font-semibold px-3 py-1 mr-2 rounded-full"
-                  >
+                  <IonChip className="bg-primaryRed text-white font-semibold px-3 py-1 mr-2 rounded-full">
                     <IonIcon icon={timeOutline} className="mr-1" />
                     <IonLabel>Turno {a.shift}</IonLabel>
                   </IonChip>
 
                   {a.notes && (
-                    <p className="text-sm text-gray-300 mt-1">
-                      Nota: {a.notes}
-                    </p>
+                    <p className="text-sm text-gray-300 mt-1">Nota: {a.notes}</p>
                   )}
                 </div>
 
-                {/* Estado */}
+                {/* Estados */}
                 {a.audit?.status === "submitted" && (
                   <IonChip className="bg-yellow-500 text-black font-semibold px-3 py-1 rounded-full mb-3">
                     <IonLabel>En revisión</IonLabel>
@@ -132,17 +150,16 @@ const Assignments: React.FC = () => {
 
                 {a.audit?.status === "reviewed" && (
                   <IonChip className="bg-blue-500 text-white font-semibold px-3 py-1 rounded-full mb-3">
-                    <IonLabel>Revisada (pendiente acciones)</IonLabel>
+                    <IonLabel>Revisada</IonLabel>
                   </IonChip>
                 )}
 
                 {a.audit?.status === "closed" && (
                   <IonChip className="bg-green-600 text-white font-semibold px-3 py-1 rounded-full mb-3">
-                    <IonLabel>Aprobada y cerrada</IonLabel>
+                    <IonLabel>Cerrada</IonLabel>
                   </IonChip>
                 )}
 
-                {/* Botón */}
                 <div className="flex justify-end mt-4">
                   {a.audit ? (
                     <IonButton
