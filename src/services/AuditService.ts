@@ -22,8 +22,6 @@ export const AuditService = {
     return resp.data;
   },
 
-
-
   async updateItem(itemId: number, data: any) {
     const resp = await api.put(`/audit-items/${itemId}`, data);
     return resp.data;

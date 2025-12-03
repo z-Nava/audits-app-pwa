@@ -3,8 +3,13 @@
 import React, { useRef } from "react";
 import { IonButton } from "@ionic/react";
 
+interface AuditPhoto {
+  url: string;
+  synced: boolean;
+}
+
 interface Props {
-  photos: string[];
+  photos: AuditPhoto[];
   onAddPhoto?: (file: File) => Promise<void> | void;
   readOnly?: boolean;
 }
@@ -17,7 +22,8 @@ const AuditPhotos: React.FC<Props> = ({ photos, onAddPhoto, readOnly }) => {
     if (file && onAddPhoto) onAddPhoto(file);
   }
 
-  const hasPhoto = photos.length > 0;
+  const photo = photos[0];
+  const hasPhoto = !!photo;
 
   return (
     <div>
@@ -30,7 +36,6 @@ const AuditPhotos: React.FC<Props> = ({ photos, onAddPhoto, readOnly }) => {
             ref={fileInputRef}
             hidden
             accept="image/*"
-            // Sugerir cámara trasera en móviles
             capture="environment"
             onChange={handleFileSelect}
           />
@@ -45,11 +50,22 @@ const AuditPhotos: React.FC<Props> = ({ photos, onAddPhoto, readOnly }) => {
       )}
 
       {hasPhoto && (
-        <img
-          src={photos[0]}
-          alt="Foto de auditoría"
-          className="w-full rounded-xl mt-3 object-cover border border-gray-700"
-        />
+        <div className="relative mt-3">
+          <img
+            src={photo.url}
+            alt="Foto de auditoría"
+            className="w-full rounded-xl object-cover border border-gray-700 shadow"
+          />
+
+          {/* 🔥 Estado visual del archivo */}
+          <span
+            className={`absolute top-2 right-2 px-2 py-1 text-xs rounded-lg font-bold
+            ${photo.synced ? "bg-green-600 text-white" : "bg-yellow-500 text-black animate-pulse"}
+          `}
+          >
+            {photo.synced ? "Sincronizada ✔" : "Pendiente ⏳"}
+          </span>
+        </div>
       )}
     </div>
   );

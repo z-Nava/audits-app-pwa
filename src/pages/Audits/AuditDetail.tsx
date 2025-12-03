@@ -14,18 +14,31 @@ import {
 import { useParams, useHistory } from "react-router-dom";
 import { Audit, AuditItem } from "../../types/audits";
 import { AuditService } from "../../services/AuditService";
+import { savePhotoOffline } from "../../offline/offline-photos";
 import api from "../../services/api";
+
+import useOnlineStatus from "../../hooks/useOnlineStatus";
+import useSyncStatus from "../../hooks/useSyncStatus";
 
 import AuditHeader from "./components/AuditHeader";
 import AuditPhotos from "./components/AuditPhotos";
+
+// 👇 Tipo local para manejar estado visual de cada foto
+interface AuditPhoto {
+  url: string;
+  synced: boolean;
+}
 
 const AuditDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const history = useHistory();
 
+  const isOnline = useOnlineStatus();
+  const { pending, online } = useSyncStatus();
+
   const [audit, setAudit] = useState<Audit | null>(null);
   const [item, setItem] = useState<AuditItem | null>(null);
-  const [photos, setPhotos] = useState<string[]>([]);
+  const [photos, setPhotos] = useState<AuditPhoto[]>([]);
   const [loading, setLoading] = useState(false);
 
   const readOnly = audit?.status !== "in_progress";
@@ -47,13 +60,16 @@ const AuditDetail: React.FC = () => {
       }
 
       setItem(auditItem);
-      // si luego cargas fotos desde el backend, aquí setPhotos(...)
+
+      // TODO: si quieres cargar fotos desde el backend, aquí podríamos hacer
+      // const resp = await api.get(`/audit-items/${auditItem.id}/photos`);
+      // setPhotos(resp.data.map((p: any) => ({ url: p.url || p.path, synced: true })));
     } finally {
       setLoading(false);
     }
   }
 
-  // 🔹 Cambiar RESULTADO: sí guarda inmediato
+  // 🔹 Cambiar RESULTADO: guarda inmediato contra API (si hay conexión)
   async function handleResultChange(result: "PASS" | "FAIL" | "NA") {
     if (!item || readOnly) return;
 
@@ -68,20 +84,41 @@ const AuditDetail: React.FC = () => {
       });
     } catch (e) {
       console.error("Error al actualizar resultado", e);
-      // Aquí podrías mostrar un toast si quieres
+      // Aquí podrías disparar un toast si quieres
     }
   }
 
-  // 🔹 Comentarios: SOLO actualizamos estado local (sin API)
+  // 🔹 Comentarios: SOLO actualizamos estado local (el submit ya envía todo)
   function handleCommentsChange(text: string) {
     if (!item) return;
     setItem({ ...item, comments: text });
   }
 
-  // Subir UNA foto y guardar URL en estado
+  // 📸 Subir UNA foto (offline/online)
   async function addPhoto(file: File) {
     if (!item) return;
 
+    // OFFLINE → guardamos en IndexedDB y mostramos como "Pendiente"
+    if (!isOnline) {
+      await savePhotoOffline({
+        audit_item_id: item.id,
+        file,
+        name: file.name,
+        type: file.type,
+      });
+
+      const localUrl = URL.createObjectURL(file);
+
+      setPhotos((prev) => [
+        ...prev,
+        { url: localUrl, synced: false }, // 🔴 pendiente de sync
+      ]);
+
+      alert("📌 Foto guardada offline. Se subirá al recuperar conexión.");
+      return;
+    }
+
+    // ONLINE → flujo normal hacia API
     const form = new FormData();
     form.append("photo", file);
 
@@ -89,7 +126,14 @@ const AuditDetail: React.FC = () => {
       headers: { "Content-Type": "multipart/form-data" },
     });
 
-    setPhotos([resp.data.url]); // solo una foto
+    // Asumimos que backend devuelve una URL pública o path
+    setPhotos((prev) => [
+      ...prev,
+      {
+        url: resp.data.url || resp.data.path,
+        synced: true,
+      },
+    ]);
   }
 
   // 🔴 Botón FINAL: guarda todo + envía auditoría
@@ -131,6 +175,21 @@ const AuditDetail: React.FC = () => {
     <IonPage>
       <IonContent className="ion-padding bg-darkBg text-white font-poppins">
         <IonLoading isOpen={loading} message={"Procesando..."} />
+
+        {/* 🔥 Banner de estado de conexión / sync */}
+        {!online ? (
+          <div className="w-full text-center p-2 mb-3 bg-yellow-600 text-black rounded-lg font-semibold">
+            🔴 Offline — Progreso guardado localmente
+          </div>
+        ) : pending ? (
+          <div className="w-full text-center p-2 mb-3 bg-blue-600 text-white rounded-lg font-semibold animate-pulse">
+            🟡 Sincronizando cambios…
+          </div>
+        ) : (
+          <div className="w-full text-center p-2 mb-3 bg-green-600 text-white rounded-lg font-semibold">
+            🟢 Todo sincronizado ✔
+          </div>
+        )}
 
         {!audit && <IonText>Cargando auditoría...</IonText>}
 

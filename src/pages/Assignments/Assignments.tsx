@@ -49,37 +49,89 @@ const Assignments: React.FC = () => {
     if (!user) return;
 
     setLoading(true);
-    const resp = await api.get(`/assignments?technician_id=${user.id}`);
-    const base = resp.data.data || resp.data;
 
-    const withAudit = await Promise.all(
-      base.map(async (a: Assignment) => {
-        const audit = await AuditService.findByAssignment(a.id, user.id);
-        return { ...a, audit };
-      })
-    );
+    try {
+      const resp = await api.get(`/assignments?technician_id=${user.id}`);
+      const base = resp.data.data || resp.data;
 
-    setAssignments(withAudit);
+      if (!Array.isArray(base)) {
+        console.warn("Offline, no hay datos previos disponibles");
+
+        setAssignments([]);
+        setLoading(false);
+        return;
+      }
+
+      const withAudit = await Promise.all(
+        base.map(async (a: Assignment) => {
+          const audit = await AuditService.findByAssignment(a.id, user.id);
+          return { ...a, audit };
+        })
+      );
+
+      setAssignments(withAudit);
+    } catch (err) {
+      console.log("Error al cargar asignaciones", err);
+    }
+
     setLoading(false);
   }
 
-  async function startAudit(a: Assignment) {
-    if (!user) return;
 
-    try {
-      const resp = await api.post("/audits", {
-        assignment_id: a.id,
-        technician_id: user.id,
-        employee_number: user.employee_number,
-        shift: a.shift,
-        summary: "",
-      });
+async function startAudit(a: Assignment) {
+  if (!user) return;
 
-      window.location.href = `/audit/${resp.data.id}`;
-    } catch {
-      alert("Error al iniciar auditoría");
+  try {
+    const resp = await api.post("/audits", {
+      assignment_id: a.id,
+      technician_id: user.id,
+      employee_number: user.employee_number,
+      shift: a.shift,
+      summary: "",
+    });
+
+    const data: any = resp.data;
+
+    // 🔴 Caso OFFLINE: el SW encoló la petición
+    if (data?.queued && data?.offline) {
+      alert(
+        "Estás offline. La solicitud para iniciar la auditoría se guardó " +
+        "y se enviará cuando recuperes conexión.\n\n" +
+        "Por ahora no es posible capturar la auditoría hasta que el servidor " +
+        "cree el folio."
+      );
+
+      // (Opcional) marcar localmente como pendiente de sync
+      setAssignments((prev) =>
+        prev.map((asig) =>
+          asig.id === a.id
+            ? {
+                ...asig,
+                audit: {
+                  ...(asig.audit || {}),
+                  status: "pending_sync",
+                },
+              }
+            : asig
+        )
+      );
+
+      return; // 👈 MUY IMPORTANTE: NO redirigir
     }
+
+    // ✅ Caso ONLINE normal: el backend devolvió un id de auditoría
+    if (data?.id) {
+      window.location.href = `/audit/${data.id}`;
+    } else {
+      console.error("Respuesta inesperada al crear auditoría:", data);
+      alert("No se pudo iniciar la auditoría (respuesta inesperada del servidor).");
+    }
+  } catch (err) {
+    console.error("Error al iniciar auditoría:", err);
+    alert("Error al iniciar auditoría.");
   }
+}
+
 
   function logout() {
     clearUser();
