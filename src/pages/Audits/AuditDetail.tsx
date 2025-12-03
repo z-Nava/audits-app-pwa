@@ -51,6 +51,7 @@ const AuditDetail: React.FC = () => {
     const toolId = audit.assignment.tools![0].id;
     setLoading(true);
 
+    // NO establecer PASS por defecto
     const newItem = await AuditService.createItem(audit.id, toolId);
     setItem(newItem);
 
@@ -61,11 +62,22 @@ const AuditDetail: React.FC = () => {
     if (!item) return;
     setLoading(true);
 
-    const updated = await AuditService.updateItem(item.id, item);
-    setItem(updated);
+    const updated = await AuditService.updateItem(item.id, {
+      result: item.result,
+      comments: item.comments ?? "",
+      defects: item.defects ?? ""
+    });
 
+    setItem(updated);
     setLoading(false);
   }
+
+  const setResult = (result: "PASS" | "FAIL" | "NA") => {
+    if (!item || readOnly) return;
+
+    // SOLO actualizar la UI, NO mandar a la API
+    setItem(prev => ({ ...prev!, result }));
+  };
 
   async function addPhoto(file: File) {
     if (!item) return;
@@ -85,8 +97,8 @@ const AuditDetail: React.FC = () => {
     setLoading(true);
 
     await AuditService.submitAudit(audit.id);
-    setLoading(false);
 
+    setLoading(false);
     alert("Auditoría enviada correctamente");
     window.location.href = "/assignments";
   }
@@ -94,11 +106,6 @@ const AuditDetail: React.FC = () => {
   useEffect(() => {
     loadAudit();
   }, []);
-
-  const setResult = (result: "PASS" | "FAIL" | "NA") => {
-    if (!item || readOnly) return;
-    setItem({ ...item, result });
-  };
 
   return (
     <IonPage>

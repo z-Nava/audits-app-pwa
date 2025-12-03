@@ -16,11 +16,13 @@ export const AuditService = {
   async createItem(auditId: number, toolId: number) {
     const resp = await api.post(`/audits/${auditId}/items`, {
       tool_id: toolId,
-      result: "PASS",
+      result: "NA",   // Default aceptado por backend
       comments: "",
     });
     return resp.data;
   },
+
+
 
   async updateItem(itemId: number, data: any) {
     const resp = await api.put(`/audit-items/${itemId}`, data);
