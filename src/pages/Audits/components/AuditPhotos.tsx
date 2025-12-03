@@ -17,41 +17,39 @@ const AuditPhotos: React.FC<Props> = ({ photos, onAddPhoto, readOnly }) => {
     if (file && onAddPhoto) onAddPhoto(file);
   }
 
+  const hasPhoto = photos.length > 0;
+
   return (
     <div>
-      <h2 className="text-lg font-semibold mb-3">Fotografías</h2>
+      <h3 className="text-lg font-bold mb-2">Fotografía</h3>
 
-      {!readOnly && (
+      {!readOnly && !hasPhoto && (
         <>
           <input
             type="file"
             ref={fileInputRef}
             hidden
             accept="image/*"
+            // Sugerir cámara trasera en móviles
+            capture="environment"
             onChange={handleFileSelect}
           />
-
           <IonButton
             expand="block"
-            className="bg-primaryRed text-white font-bold rounded-xl mb-4"
+            className="bg-primaryRed text-white font-bold rounded-xl"
             onClick={() => fileInputRef.current?.click()}
           >
-            Agregar foto
+            Tomar / Subir foto
           </IonButton>
         </>
       )}
 
-      {photos.length > 0 && (
-        <div className="grid grid-cols-1 gap-3">
-          {photos.map((p, i) => (
-            <img
-              key={i}
-              src={p}
-              alt="audit"
-              className="w-full rounded-lg object-cover"
-            />
-          ))}
-        </div>
+      {hasPhoto && (
+        <img
+          src={photos[0]}
+          alt="Foto de auditoría"
+          className="w-full rounded-xl mt-3 object-cover border border-gray-700"
+        />
       )}
     </div>
   );

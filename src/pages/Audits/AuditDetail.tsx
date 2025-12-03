@@ -1,3 +1,5 @@
+// src/pages/Audits/AuditDetail.tsx
+
 import React, { useEffect, useState } from "react";
 import {
   IonPage,
@@ -7,23 +9,20 @@ import {
   IonLoading,
   IonCard,
   IonCardContent,
-  IonIcon,
 } from "@ionic/react";
 
-import { useParams } from "react-router-dom";
+import { useParams, useHistory } from "react-router-dom";
 import { Audit, AuditItem } from "../../types/audits";
 import { AuditService } from "../../services/AuditService";
 import api from "../../services/api";
 
 import AuditHeader from "./components/AuditHeader";
-import AuditToolCard from "./components/AuditToolCard";
-import AuditItemForm from "./components/AuditItemForm";
 import AuditPhotos from "./components/AuditPhotos";
-
-import { listCircleOutline, checkmarkDoneOutline } from "ionicons/icons";
 
 const AuditDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();
+  const history = useHistory();
+
   const [audit, setAudit] = useState<Audit | null>(null);
   const [item, setItem] = useState<AuditItem | null>(null);
   const [photos, setPhotos] = useState<string[]>([]);
@@ -33,52 +32,53 @@ const AuditDetail: React.FC = () => {
 
   async function loadAudit() {
     if (!id) return;
-
     setLoading(true);
-    const data = await AuditService.getAudit(Number(id));
-    setAudit(data);
 
-    if (data.items && data.items.length > 0) {
-      setItem(data.items[0]);
+    try {
+      const data = await AuditService.getAudit(Number(id));
+      setAudit(data);
+
+      // Tomamos el primer ítem o lo creamos si no existe
+      let auditItem: AuditItem | null = data.items?.[0] ?? null;
+
+      if (!auditItem) {
+        const toolId = data.assignment.tools![0].id;
+        auditItem = await AuditService.createItem(data.id, toolId);
+      }
+
+      setItem(auditItem);
+      // si luego cargas fotos desde el backend, aquí setPhotos(...)
+    } finally {
+      setLoading(false);
     }
-
-    setLoading(false);
   }
 
-  async function createItem() {
-    if (!audit) return;
-
-    const toolId = audit.assignment.tools![0].id;
-    setLoading(true);
-
-    // NO establecer PASS por defecto
-    const newItem = await AuditService.createItem(audit.id, toolId);
-    setItem(newItem);
-
-    setLoading(false);
-  }
-
-  async function saveItem() {
-    if (!item) return;
-    setLoading(true);
-
-    const updated = await AuditService.updateItem(item.id, {
-      result: item.result,
-      comments: item.comments ?? "",
-      defects: item.defects ?? ""
-    });
-
-    setItem(updated);
-    setLoading(false);
-  }
-
-  const setResult = (result: "PASS" | "FAIL" | "NA") => {
+  // 🔹 Cambiar RESULTADO: sí guarda inmediato
+  async function handleResultChange(result: "PASS" | "FAIL" | "NA") {
     if (!item || readOnly) return;
 
-    // SOLO actualizar la UI, NO mandar a la API
-    setItem(prev => ({ ...prev!, result }));
-  };
+    const updatedLocal: AuditItem = { ...item, result };
+    setItem(updatedLocal);
 
+    try {
+      await AuditService.updateItem(item.id, {
+        result,
+        comments: updatedLocal.comments ?? "",
+        defects: updatedLocal.defects ?? "",
+      });
+    } catch (e) {
+      console.error("Error al actualizar resultado", e);
+      // Aquí podrías mostrar un toast si quieres
+    }
+  }
+
+  // 🔹 Comentarios: SOLO actualizamos estado local (sin API)
+  function handleCommentsChange(text: string) {
+    if (!item) return;
+    setItem({ ...item, comments: text });
+  }
+
+  // Subir UNA foto y guardar URL en estado
   async function addPhoto(file: File) {
     if (!item) return;
 
@@ -89,18 +89,38 @@ const AuditDetail: React.FC = () => {
       headers: { "Content-Type": "multipart/form-data" },
     });
 
-    setPhotos((prev) => [...prev, resp.data.url]);
+    setPhotos([resp.data.url]); // solo una foto
   }
 
+  // 🔴 Botón FINAL: guarda todo + envía auditoría
   async function submitAudit() {
-    if (!audit) return;
+    if (!audit || !item) return;
+
+    if (!item.result) {
+      alert("Debes seleccionar un resultado (PASS / FAIL / NA).");
+      return;
+    }
+
     setLoading(true);
+    try {
+      // 1) Guardar último estado (incluye comentarios)
+      await AuditService.updateItem(item.id, {
+        result: item.result ?? "NA",
+        comments: item.comments ?? "",
+        defects: item.defects ?? "",
+      });
 
-    await AuditService.submitAudit(audit.id);
+      // 2) Enviar auditoría
+      await AuditService.submitAudit(audit.id);
 
-    setLoading(false);
-    alert("Auditoría enviada correctamente");
-    window.location.href = "/assignments";
+      alert("Auditoría enviada correctamente");
+      history.push("/assignments");
+    } catch (e) {
+      console.error("Error al enviar auditoría", e);
+      alert("Ocurrió un error al enviar la auditoría.");
+    } finally {
+      setLoading(false);
+    }
   }
 
   useEffect(() => {
@@ -110,103 +130,69 @@ const AuditDetail: React.FC = () => {
   return (
     <IonPage>
       <IonContent className="ion-padding bg-darkBg text-white font-poppins">
-        <IonLoading isOpen={loading} message={"Cargando..."} />
+        <IonLoading isOpen={loading} message={"Procesando..."} />
 
         {!audit && <IonText>Cargando auditoría...</IonText>}
 
-        {audit && (
+        {audit && item && (
           <>
-            <AuditHeader audit={audit} readOnly={readOnly} />
+            <AuditHeader audit={audit} />
 
-            {/* HERRAMIENTA */}
             <IonCard className="bg-[#1A1A1A] border border-primaryRed/40 rounded-2xl mt-4 shadow-md">
-              <IonCardContent>
-                <div className="flex items-center gap-2 text-lg font-bold mb-4">
-                  <IonIcon icon={listCircleOutline} className="text-primaryRed text-2xl" />
-                  <span>Herramienta a Auditar</span>
+              <IonCardContent className="space-y-4">
+                {/* RESULTADO */}
+                <div>
+                  <h3 className="font-bold text-lg mb-3">Resultado</h3>
+                  <div className="grid grid-cols-3 gap-3">
+                    {(["PASS", "FAIL", "NA"] as const).map((val) => (
+                      <button
+                        key={val}
+                        disabled={readOnly}
+                        onClick={() => handleResultChange(val)}
+                        className={`py-3 rounded-xl font-bold border 
+                          ${
+                            item.result === val
+                              ? "bg-primaryRed border-primaryRed text-white"
+                              : "bg-[#222] border-gray-600 text-gray-300"
+                          }`}
+                      >
+                        {val}
+                      </button>
+                    ))}
+                  </div>
                 </div>
 
-                <AuditToolCard
-                  tool={audit.assignment.tools![0]}
-                  itemExists={!!item}
-                  onCreateItem={!readOnly ? createItem : undefined}
+                {/* FOTO */}
+                <AuditPhotos
+                  photos={photos}
                   readOnly={readOnly}
+                  onAddPhoto={readOnly ? undefined : addPhoto}
                 />
+
+                {/* COMENTARIOS */}
+                <div>
+                  <h3 className="font-bold text-lg mb-2">Comentarios</h3>
+                  <textarea
+                    className="w-full p-3 bg-[#111] rounded-xl text-white border border-gray-700"
+                    placeholder="Escribe comentarios adicionales..."
+                    disabled={readOnly}
+                    value={item.comments ?? ""}
+                    onChange={(e) => handleCommentsChange(e.target.value)}
+                  />
+                </div>
+
+                {/* BOTÓN ENVIAR */}
+                {!readOnly && (
+                  <IonButton
+                    expand="block"
+                    className="bg-primaryRed mt-2 h-12 rounded-xl font-bold tracking-wide"
+                    onClick={submitAudit}
+                  >
+                    ENVIAR AUDITORÍA
+                  </IonButton>
+                )}
               </IonCardContent>
             </IonCard>
-
-            {/* RESULTADO */}
-            {item && (
-              <IonCard className="bg-[#1A1A1A] border border-primaryRed/40 rounded-2xl mt-4 shadow-md">
-                <IonCardContent>
-                  <div className="flex items-center gap-2 text-lg font-bold mb-4">
-                    <IonIcon icon={checkmarkDoneOutline} className="text-primaryRed text-3xl" />
-                    <span>Resultado de Auditoría</span>
-                  </div>
-
-                  {/* BOTONES PASS / FAIL / NA */}
-                  <div className="grid grid-cols-3 gap-3 mb-6">
-                    <button
-                      className={`btn-result ${item.result === "PASS" ? "btn-pass-active" : "btn-pass"}`}
-                      disabled={readOnly}
-                      onClick={() => setResult("PASS")}
-                    >
-                      PASS
-                    </button>
-
-                    <button
-                      className={`btn-result ${item.result === "FAIL" ? "btn-fail-active" : "btn-fail"}`}
-                      disabled={readOnly}
-                      onClick={() => setResult("FAIL")}
-                    >
-                      FAIL
-                    </button>
-
-                    <button
-                      className={`btn-result ${item.result === "NA" ? "btn-na-active" : "btn-na"}`}
-                      disabled={readOnly}
-                      onClick={() => setResult("NA")}
-                    >
-                      N/A
-                    </button>
-                  </div>
-
-                  {/* COMENTARIOS + GUARDAR */}
-                  <AuditItemForm
-                    item={item}
-                    readOnly={readOnly}
-                    onChange={
-                      readOnly ? undefined : (field, value) =>
-                        setItem({ ...item, [field]: value })
-                    }
-                    onSave={readOnly ? undefined : saveItem}
-                  />
-                </IonCardContent>
-              </IonCard>
-            )}
-
-            {/* FOTOS */}
-            {item && (
-              <IonCard className="bg-[#1A1A1A] border border-primaryRed/40 rounded-2xl mt-4 shadow-md">
-                <IonCardContent>
-                  <AuditPhotos
-                    photos={photos}
-                    readOnly={readOnly}
-                    onAddPhoto={readOnly ? undefined : addPhoto}
-                  />
-                </IonCardContent>
-              </IonCard>
-            )}
-
-            {!readOnly && item && (
-              <IonButton
-                expand="block"
-                className="bg-primaryRed mt-6 h-12 rounded-xl font-bold tracking-wide"
-                onClick={submitAudit}
-              >
-                ENVIAR AUDITORÍA
-              </IonButton>
-            )}
           </>
         )}
       </IonContent>
