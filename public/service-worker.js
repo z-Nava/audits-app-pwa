@@ -8,7 +8,7 @@ const APP_VERSION = "v2.2.0";
 const STATIC_CACHE = `static-${APP_VERSION}`;
 const API_CACHE = `api-${APP_VERSION}`;
 const DB_NAME = "audit-offline-db";
-const DB_VERSION = 3;
+const DB_VERSION = 6;
 
 const API_QUEUE = "api-queue";
 const PHOTO_QUEUE = "photo-queue";
@@ -24,7 +24,7 @@ const STATIC_FILES = [
 
 /* Install */
 self.addEventListener("install", (event) => {
-  event.waitUntil(caches.open(STATIC_CACHE).then(c => c.addAll(STATIC_FILES)));
+  event.waitUntil(caches.open(STATIC_CACHE).then((c) => c.addAll(STATIC_FILES)));
   self.skipWaiting();
 });
 
@@ -41,21 +41,46 @@ self.addEventListener("fetch", (event) => {
   const req = event.request;
   const url = new URL(req.url);
 
-  // Evitar login/logout offline
-  if (url.pathname.startsWith("/api/v1/auth/")) return;
+  const isSameOrigin = url.origin === self.location.origin;
+const isApiServer =
+  url.origin.includes("localhost:8000") ||
+  url.origin.includes("127.0.0.1:8000");
 
-  if (req.method === "GET") {
-    if (url.pathname.startsWith("/api/")) {
-      event.respondWith(apiNetworkFallback(req));
-    } else {
-      event.respondWith(networkFallback(req));
-    }
+if (!isSameOrigin && !isApiServer) {
+  return; // SW no intercepta peticiones externas
+}
+
+
+  console.log("[SW] Fetch:", req.method, req.url);
+
+  // Evitar login/logout (auth) si quieres que no se encoloquen
+  if (url.pathname.startsWith("/api/v1/auth")) {
+    console.log("[SW] Auth URL, no offline queue:", req.url);
     return;
   }
 
-  // Solo manejar modificación sin red
-  if (!navigator.onLine && ["POST", "PUT", "PATCH", "DELETE"].includes(req.method)) {
-    event.respondWith(queueRequest(req));
+  // GET → comportamiento normal con fallback
+  if (req.method === "GET") {
+    if (url.pathname.startsWith("/api/")) {
+      event.respondWith(apiNetworkFallback(req));
+      return;
+    } else {
+      event.respondWith(networkFallback(req));
+      return;
+    }
+  }
+
+  // POST / PUT / PATCH / DELETE → intentar red y si falla, encolar
+  if (["POST", "PUT", "PATCH", "DELETE"].includes(req.method)) {
+    const reqClone = req.clone(); // ← clon para guardar en cola
+
+    event.respondWith(
+      fetch(req).catch(() => {
+        console.warn("[SW] Network failed, queuing request:", req.url);
+        return queueRequest(reqClone);
+      })
+    );
+    return;
   }
 });
 
@@ -63,8 +88,11 @@ self.addEventListener("fetch", (event) => {
    Estrategias GET
 ====================================================== */
 async function networkFallback(req) {
-  try { return await fetch(req); }
-  catch { return caches.match(req) || caches.match(OFFLINE_URL); }
+  try {
+    return await fetch(req);
+  } catch {
+    return (await caches.match(req)) || (await caches.match(OFFLINE_URL));
+  }
 }
 
 async function apiNetworkFallback(req) {
@@ -78,6 +106,7 @@ async function apiNetworkFallback(req) {
     return (
       cached ||
       new Response(JSON.stringify({ data: [], offline: true }), {
+        status: 200,
         headers: { "Content-Type": "application/json" },
       })
     );
@@ -90,13 +119,29 @@ async function apiNetworkFallback(req) {
 async function queueRequest(req) {
   const db = await openDB();
   const tx = db.transaction(API_QUEUE, "readwrite");
-  tx.objectStore(API_QUEUE).add(await serializeRequest(req));
-  await tx.done;
+  const store = tx.objectStore(API_QUEUE);
 
-  self.registration.sync?.register("sync-api");
+  const serialized = await serializeRequest(req);
+  store.add(serialized);
+
+  await new Promise((resolve, reject) => {
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+    tx.onabort = () => reject(tx.error);
+  });
+
+  if (self.registration.sync) {
+    try {
+      await self.registration.sync.register("sync-api");
+    } catch (e) {
+      console.warn("[SW] No se pudo registrar sync-api:", e);
+    }
+  }
+
   console.warn("[SW] API guardada offline:", req.url);
 
   return new Response(JSON.stringify({ queued: true, offline: true }), {
+    status: 200,
     headers: { "Content-Type": "application/json" },
   });
 }
@@ -120,33 +165,49 @@ self.addEventListener("sync", (event) => {
 ====================================================== */
 async function syncApiQueue() {
   const db = await openDB();
-  const store = db.transaction(API_QUEUE, "readwrite").store;
+  const tx = db.transaction(API_QUEUE, "readwrite");
+  const store = tx.objectStore(API_QUEUE);
+
+  console.log("[SW] syncApiQueue called");
 
   let cursor = await store.openCursor();
   while (cursor) {
     const { url, method, headers, body } = cursor.value;
     try {
       await fetch(url, { method, headers, body });
+      console.log("[SW] Request sent:", method, url);
       await cursor.delete();
-    } catch { break; }
+    } catch (e) {
+      console.warn("[SW] Error enviando request, se detiene sync:", e);
+      break;
+    }
     cursor = await cursor.continue();
   }
 }
 
 async function syncPhotoQueue() {
   const db = await openDB();
-  const store = db.transaction(PHOTO_QUEUE, "readwrite").store;
+  const tx = db.transaction(PHOTO_QUEUE, "readwrite");
+  const store = tx.objectStore(PHOTO_QUEUE);
+
+  console.log("[SW] syncPhotoQueue called");
 
   let cursor = await store.openCursor();
   while (cursor) {
     const p = cursor.value;
+    console.log("[SW] Uploading photo:", p.name);
+
     const form = new FormData();
     form.append("photo", new Blob([p.file], { type: p.type }), p.name);
 
     try {
       await fetch(p.url, { method: "POST", body: form });
+      console.log("[SW] Photo uploaded:", p.name);
       await cursor.delete();
-    } catch { break; }
+    } catch (e) {
+      console.warn("[SW] Error subiendo foto, se detiene sync:", e);
+      break;
+    }
 
     cursor = await cursor.continue();
   }
@@ -157,14 +218,19 @@ async function syncPhotoQueue() {
 ====================================================== */
 function openDB() {
   return new Promise((resolve, reject) => {
+    console.log("Opening IndexedDB");
     const req = indexedDB.open(DB_NAME, DB_VERSION);
+    console.log("IndexedDB open request made");
 
     req.onupgradeneeded = () => {
       const db = req.result;
+
       if (!db.objectStoreNames.contains(API_QUEUE)) {
+        console.log("Creating API_QUEUE object store");
         db.createObjectStore(API_QUEUE, { autoIncrement: true });
       }
       if (!db.objectStoreNames.contains(PHOTO_QUEUE)) {
+        console.log("Creating PHOTO_QUEUE object store");
         db.createObjectStore(PHOTO_QUEUE, { autoIncrement: true });
       }
     };
@@ -178,7 +244,21 @@ function openDB() {
 async function serializeRequest(req) {
   const headers = {};
   req.headers.forEach((v, k) => (headers[k] = v));
+
   let body = null;
-  if (req.method !== "GET") body = await req.clone().blob();
-  return { url: req.url, method: req.method, headers, body };
+  if (req.method !== "GET" && req.method !== "HEAD") {
+    const clone = req.clone();
+    try {
+      body = await clone.blob();
+    } catch {
+      body = null;
+    }
+  }
+
+  return {
+    url: req.url,
+    method: req.method,
+    headers,
+    body,
+  };
 }

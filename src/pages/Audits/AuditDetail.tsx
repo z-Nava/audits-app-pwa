@@ -60,33 +60,34 @@ const AuditDetail: React.FC = () => {
       }
 
       setItem(auditItem);
-
-      // TODO: si quieres cargar fotos desde el backend, aquí podríamos hacer
-      // const resp = await api.get(`/audit-items/${auditItem.id}/photos`);
-      // setPhotos(resp.data.map((p: any) => ({ url: p.url || p.path, synced: true })));
+      // Si quisieras, aquí podrías cargar fotos ya existentes del backend
     } finally {
       setLoading(false);
     }
   }
 
-  // 🔹 Cambiar RESULTADO: guarda inmediato contra API (si hay conexión)
+  // 🔹 Cambiar RESULTADO
   async function handleResultChange(result: "PASS" | "FAIL" | "NA") {
-    if (!item || readOnly) return;
+  if (!item || readOnly) return;
 
-    const updatedLocal: AuditItem = { ...item, result };
-    setItem(updatedLocal);
+  const updatedLocal: AuditItem = { ...item, result };
+  setItem(updatedLocal);
 
-    try {
-      await AuditService.updateItem(item.id, {
-        result,
-        comments: updatedLocal.comments ?? "",
-        defects: updatedLocal.defects ?? "",
-      });
-    } catch (e) {
-      console.error("Error al actualizar resultado", e);
-      // Aquí podrías disparar un toast si quieres
-    }
+  // 🔥 Si estamos offline → NO LLAMAR AXIOS
+  
+
+  try {
+    await AuditService.updateItem(item.id, {
+      result,
+      comments: updatedLocal.comments ?? "",
+      defects: updatedLocal.defects ?? "",
+    });
+
+  } catch (e) {
+    console.error("Error al actualizar resultado", e);
   }
+}
+
 
   // 🔹 Comentarios: SOLO actualizamos estado local (el submit ya envía todo)
   function handleCommentsChange(text: string) {
@@ -126,7 +127,6 @@ const AuditDetail: React.FC = () => {
       headers: { "Content-Type": "multipart/form-data" },
     });
 
-    // Asumimos que backend devuelve una URL pública o path
     setPhotos((prev) => [
       ...prev,
       {
@@ -138,34 +138,45 @@ const AuditDetail: React.FC = () => {
 
   // 🔴 Botón FINAL: guarda todo + envía auditoría
   async function submitAudit() {
-    if (!audit || !item) return;
+  if (!audit || !item) return;
 
-    if (!item.result) {
-      alert("Debes seleccionar un resultado (PASS / FAIL / NA).");
+  if (!item.result) {
+    alert("Debes seleccionar un resultado (PASS / FAIL / NA).");
+    return;
+  }
+
+  const payload = {
+    result: item.result ?? "NA",
+    comments: item.comments ?? "",
+    defects: item.defects ?? "",
+  };
+
+  // 🚫 1. SI ESTÁS OFFLINE → NO SE LLAMA A AXIOS
+
+  // 🌐 2. ONLINE → flujo normal
+  setLoading(true);
+  try {
+    await AuditService.updateItem(item.id, payload);
+    await AuditService.submitAudit(audit.id);
+
+    alert("Auditoría enviada correctamente");
+    history.push("/assignments");
+
+  } catch (e: any) {
+    console.error("Error al enviar auditoría", e);
+
+    if (e.code === "ERR_NETWORK") {
+      alert("Estás offline. La auditoría se guardará y enviará al volver la conexión.");
+      history.push("/assignments");
       return;
     }
 
-    setLoading(true);
-    try {
-      // 1) Guardar último estado (incluye comentarios)
-      await AuditService.updateItem(item.id, {
-        result: item.result ?? "NA",
-        comments: item.comments ?? "",
-        defects: item.defects ?? "",
-      });
-
-      // 2) Enviar auditoría
-      await AuditService.submitAudit(audit.id);
-
-      alert("Auditoría enviada correctamente");
-      history.push("/assignments");
-    } catch (e) {
-      console.error("Error al enviar auditoría", e);
-      alert("Ocurrió un error al enviar la auditoría.");
-    } finally {
-      setLoading(false);
-    }
+    alert("Ocurrió un error al enviar la auditoría.");
+  } finally {
+    setLoading(false);
   }
+}
+
 
   useEffect(() => {
     loadAudit();
