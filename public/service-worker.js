@@ -1,10 +1,10 @@
 /* ======================================================
-   Milwaukee Audits PWA - Offline + Sync + Photos v5
+   Milwaukee Audits PWA - Offline + Sync + Photos v5.1
 ====================================================== */
 
-console.log("[SW] Running v5 🚀");
+console.log("[SW] Running v5.1 🚀");
 
-const APP_VERSION = "v2.2.0";
+const APP_VERSION = "v2.2.1";
 const STATIC_CACHE = `static-${APP_VERSION}`;
 const API_CACHE = `api-${APP_VERSION}`;
 const DB_NAME = "audit-offline-db";
@@ -31,7 +31,7 @@ self.addEventListener("install", (event) => {
 /* Activate */
 self.addEventListener("activate", (event) => {
   event.waitUntil(self.clients.claim());
-  console.log("[SW] Activated v5!");
+  console.log("[SW] Activated v5.1!");
 });
 
 /* ======================================================
@@ -42,14 +42,13 @@ self.addEventListener("fetch", (event) => {
   const url = new URL(req.url);
 
   const isSameOrigin = url.origin === self.location.origin;
-const isApiServer =
-  url.origin.includes("localhost:8000") ||
-  url.origin.includes("127.0.0.1:8000");
+  const isApiServer =
+    url.origin.includes("localhost:8000") ||
+    url.origin.includes("127.0.0.1:8000");
 
-if (!isSameOrigin && !isApiServer) {
-  return; // SW no intercepta peticiones externas
-}
-
+  if (!isSameOrigin && !isApiServer) {
+    return; // SW no intercepta peticiones externas
+  }
 
   console.log("[SW] Fetch:", req.method, req.url);
 
@@ -114,22 +113,27 @@ async function apiNetworkFallback(req) {
 }
 
 /* ======================================================
-   Queue API Offline
+   Queue API Offline  ✅ ARREGLADA
 ====================================================== */
 async function queueRequest(req) {
+  // 1️⃣ Primero serializamos (fuera de la transacción)
+  const serialized = await serializeRequest(req);
+
+  // 2️⃣ Luego abrimos DB y transacción SIN awaits en medio
   const db = await openDB();
   const tx = db.transaction(API_QUEUE, "readwrite");
   const store = tx.objectStore(API_QUEUE);
 
-  const serialized = await serializeRequest(req);
   store.add(serialized);
 
+  // 3️⃣ Esperamos a que termine la transacción
   await new Promise((resolve, reject) => {
     tx.oncomplete = () => resolve();
     tx.onerror = () => reject(tx.error);
     tx.onabort = () => reject(tx.error);
   });
 
+  // 4️⃣ Registramos background sync si se puede
   if (self.registration.sync) {
     try {
       await self.registration.sync.register("sync-api");
@@ -160,58 +164,180 @@ self.addEventListener("sync", (event) => {
   }
 });
 
+function getApiQueueEntries() {
+  return new Promise(async (resolve) => {
+    console.log("[SW] getApiQueueEntries: start");
+    const db = await openDB();
+    const tx = db.transaction(API_QUEUE, "readonly");
+    const store = tx.objectStore(API_QUEUE);
+    const entries = [];
+
+    const req = store.openCursor();
+
+    req.onerror = () => {
+      console.error("[SW] getApiQueueEntries error:", req.error);
+      resolve(entries); // devolvemos lo que haya
+    };
+
+    req.onsuccess = () => {
+      const cursor = req.result;
+      if (!cursor) {
+        console.log("[SW] getApiQueueEntries: done, total:", entries.length);
+        resolve(entries);
+        return;
+      }
+
+      entries.push({
+        key: cursor.key,
+        value: cursor.value,
+      });
+
+      cursor.continue();
+    };
+  });
+}
+
+
 /* ======================================================
    Procesar colas
 ====================================================== */
+/* ======================================================
+   Procesar colas API (versión sin cursor + await)
+====================================================== */
 async function syncApiQueue() {
-  const db = await openDB();
-  const tx = db.transaction(API_QUEUE, "readwrite");
-  const store = tx.objectStore(API_QUEUE);
+  console.log("%c[SW] syncApiQueue START 🚀", "color: yellow; font-weight: bold");
 
-  console.log("[SW] syncApiQueue called");
+  // 1️⃣ Leer TODA la cola en memoria
+  const entries = await getApiQueueEntries();
+  console.log("[SW] Entries to sync:", entries.length);
 
-  let cursor = await store.openCursor();
-  while (cursor) {
-    const { url, method, headers, body } = cursor.value;
-    try {
-      await fetch(url, { method, headers, body });
-      console.log("[SW] Request sent:", method, url);
-      await cursor.delete();
-    } catch (e) {
-      console.warn("[SW] Error enviando request, se detiene sync:", e);
-      break;
+  for (const { key, value } of entries) {
+    console.log("[SW] Processing entry key:", key, "value:", value);
+
+    // Validar entrada
+    if (!value || typeof value !== "object" || !value.url) {
+      console.warn("[SW] Invalid entry, deleting...", key, value);
+      await deleteApiQueueEntry(key);
+      continue;
     }
-    cursor = await cursor.continue();
+
+    const { url, method, headers, body } = value;
+    console.log("%c[SW] Sending:", "color: magenta", { method, url, body });
+
+    try {
+      const res = await fetch(url, {
+        method,
+        headers,
+        body:
+          method === "GET" || method === "HEAD"
+            ? undefined
+            : body, // ya es string JSON
+      });
+
+      console.log("%c[SW] Response:", "color: lightgreen", res.status, url);
+
+      if (!res.ok) {
+        console.warn(
+          "%c[SW] Server error, stopping sync ⚠",
+          "color: orange",
+          res.status,
+          url
+        );
+        break; // paramos sync, reintentará después
+      }
+
+      // 2️⃣ Si todo salió bien, borramos esta entrada en otra tx
+      await deleteApiQueueEntry(key);
+    } catch (err) {
+      console.error(
+        "%c[SW] Network / fetch ERROR ❌, stopping sync",
+        "color: red",
+        err
+      );
+      break; // red mala → salimos, BG Sync reintentará luego
+    }
   }
+
+  console.log("%c[SW] syncApiQueue FINISHED 🟢", "color: lime; font-weight: bold");
 }
+
+/* Helper para borrar una entrada por key en una transacción corta */
+function deleteApiQueueEntry(key) {
+  return new Promise(async (resolve) => {
+    console.log("[SW] Deleting entry from API_QUEUE:", key);
+    const db = await openDB();
+    const tx = db.transaction(API_QUEUE, "readwrite");
+    const store = tx.objectStore(API_QUEUE);
+    store.delete(key);
+
+    tx.oncomplete = () => {
+      console.log("%c[SW] DELETE OK ❤️ key=" + key, "color: lightgreen");
+      resolve();
+    };
+    tx.onerror = (e) => {
+      console.warn("%c[SW] DELETE FAILED ⚠ key=" + key, "color: orange", e);
+      resolve(); // no bloqueamos todo por esto
+    };
+  });
+}
+
+
+
+
 
 async function syncPhotoQueue() {
   const db = await openDB();
   const tx = db.transaction(PHOTO_QUEUE, "readwrite");
   const store = tx.objectStore(PHOTO_QUEUE);
 
-  console.log("[SW] syncPhotoQueue called");
+  console.log("%c[SW] syncPhotoQueue START 📸", "color: cyan; font-weight: bold");
 
-  let cursor = await store.openCursor();
-  while (cursor) {
-    const p = cursor.value;
-    console.log("[SW] Uploading photo:", p.name);
+  const req = store.openCursor();
 
-    const form = new FormData();
-    form.append("photo", new Blob([p.file], { type: p.type }), p.name);
+  return new Promise((resolve) => {
+    req.onerror = () => {
+      console.error("[SW] Error leyendo PHOTO_QUEUE:", req.error);
+      resolve();
+    };
 
-    try {
-      await fetch(p.url, { method: "POST", body: form });
-      console.log("[SW] Photo uploaded:", p.name);
-      await cursor.delete();
-    } catch (e) {
-      console.warn("[SW] Error subiendo foto, se detiene sync:", e);
-      break;
-    }
+    req.onsuccess = async () => {
+      const cursor = req.result;
 
-    cursor = await cursor.continue();
-  }
+      if (!cursor) {
+        console.log("%c[SW] syncPhotoQueue FINISHED 🟢", "color: lime");
+        resolve();
+        return;
+      }
+
+      const p = cursor.value;
+
+      if (!p || !p.file) {
+        console.warn("[SW] Foto inválida, borrando entrada...");
+        cursor.delete();
+        cursor.continue();
+        return;
+      }
+
+      console.log("[SW] Uploading photo:", p.name);
+
+      const form = new FormData();
+      form.append("photo", p.file, p.name);
+
+      try {
+        const res = await fetch(p.url, { method: "POST", body: form });
+        console.log("[SW] Photo uploaded:", p.name);
+        cursor.delete();
+      } catch (e) {
+        console.warn("[SW] Error subiendo foto, se detiene sync:", e);
+        resolve(); // 🔥 si falla la red, paramos aquí
+        return;
+      }
+
+      cursor.continue();
+    };
+  });
 }
+
 
 /* ======================================================
    IndexedDB Unificada
@@ -242,15 +368,19 @@ function openDB() {
 
 /* Serializar universal */
 async function serializeRequest(req) {
+  console.log("[SW] Serializing request:", req.method, req.url);
+
   const headers = {};
   req.headers.forEach((v, k) => (headers[k] = v));
+  console.log("[SW] Headers:", headers);
 
   let body = null;
   if (req.method !== "GET" && req.method !== "HEAD") {
-    const clone = req.clone();
+    console.log("[SW] Cloning request for body extraction");
     try {
-      body = await clone.blob();
-    } catch {
+      body = await req.clone().text();   // 🔥 IMPORTANTE: string, no Blob
+    } catch (e) {
+      console.warn("[SW] Error reading body:", e);
       body = null;
     }
   }
@@ -262,3 +392,5 @@ async function serializeRequest(req) {
     body,
   };
 }
+
+

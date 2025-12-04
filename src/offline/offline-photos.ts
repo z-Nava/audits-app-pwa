@@ -41,9 +41,15 @@ export async function savePhotoOffline(photo: {
   const tx = db.transaction(PHOTO_QUEUE, "readwrite");
   const store = tx.objectStore(PHOTO_QUEUE);
 
+  // Obtener token del store (cliente)
+  const token = localStorage.getItem("token"); // ✔ O useUserStore si prefieres
+
   store.add({
     ...photo,
-    url: `/api/v1/audit-items/${photo.audit_item_id}/photos`,
+    url: `http://localhost:8000/api/v1/audit-items/${photo.audit_item_id}/photos`,
+    headers: {
+      authorization: token ? `Bearer ${token}` : undefined,
+    },
     created_at: new Date().toISOString(),
   });
 
