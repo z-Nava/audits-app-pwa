@@ -133,11 +133,11 @@ async function queueRequest(req) {
     tx.onabort = () => reject(tx.error);
   });
 
-  // 4️⃣ Registramos background sync si se puede
+  
  if (self.registration.sync) {
   try {
     await self.registration.sync.register("sync-api");
-    await self.registration.sync.register("sync-photos"); // 🔥 FALTABA ESTO
+    await self.registration.sync.register("sync-photos"); 
     console.log("[SW] sync-api y sync-photos registrados");
   } catch (e) {
     console.warn("[SW] No se pudo registrar BG Sync:", e);
@@ -217,11 +217,7 @@ function getApiQueueEntries() {
 async function syncApiQueue() {
   console.log("%c[SW] syncApiQueue START 🚀", "color: yellow; font-weight: bold");
 
-  // 🆕 Forzar sincronizar fotos primero para evitar 422
-  console.log("%c[SW] Ejecutando syncPhotoQueue ANTES de API", "color: cyan; font-weight: bold");
-  await syncPhotoQueue();
-
-  // 1️⃣ Leer TODA la cola API en memoria
+ 
   const entries = await getApiQueueEntries();
   console.log("[SW] Entries to sync:", entries.length);
 
@@ -333,7 +329,7 @@ async function syncPhotoQueue() {
         return;
       }
 
-      // 📤 Preparar FormData correctamente
+    
       const form = new FormData();
       form.append("photo", entry.file, entry.name);
       if (entry.caption) form.append("caption", entry.caption);
@@ -341,9 +337,9 @@ async function syncPhotoQueue() {
 
       console.log("[SW] FormData keys:", Array.from(form.keys()));
 
-      // 🧽 Limpiar headers
+      
       const headers = entry.headers ? { ...entry.headers } : {};
-      delete headers["Content-Type"]; // 🚫 Muy importante
+      delete headers["Content-Type"];
 
       console.log("[SW] 📤 Subiendo foto a:", entry.url);
 
@@ -370,7 +366,7 @@ async function syncPhotoQueue() {
           console.warn("[SW] Error deleting cursor:", e);
         }
 
-        cursor.continue(); // 👉 seguimos con la siguiente foto
+        cursor.continue(); 
       } catch (err) {
         console.error("[SW] ❌ Error de red → retry later:", err);
         resolve();
@@ -419,7 +415,7 @@ async function serializeRequest(req) {
   if (req.method !== "GET" && req.method !== "HEAD") {
     console.log("[SW] Cloning request for body extraction");
     try {
-      body = await req.clone().text();   // 🔥 IMPORTANTE: string, no Blob
+      body = await req.clone().text();   
     } catch (e) {
       console.warn("[SW] Error reading body:", e);
       body = null;
