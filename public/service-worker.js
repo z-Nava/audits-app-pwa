@@ -8,7 +8,7 @@ const APP_VERSION = "v2.2.1";
 const STATIC_CACHE = `static-${APP_VERSION}`;
 const API_CACHE = `api-${APP_VERSION}`;
 const DB_NAME = "audit-offline-db";
-const DB_VERSION = 6;
+const DB_VERSION = 9;
 
 const API_QUEUE = "api-queue";
 const PHOTO_QUEUE = "photo-queue";
@@ -134,13 +134,23 @@ async function queueRequest(req) {
   });
 
   // 4️⃣ Registramos background sync si se puede
-  if (self.registration.sync) {
-    try {
-      await self.registration.sync.register("sync-api");
-    } catch (e) {
-      console.warn("[SW] No se pudo registrar sync-api:", e);
-    }
+ if (self.registration.sync) {
+  try {
+    await self.registration.sync.register("sync-api");
+    await self.registration.sync.register("sync-photos"); // 🔥 FALTABA ESTO
+    console.log("[SW] sync-api y sync-photos registrados");
+  } catch (e) {
+    console.warn("[SW] No se pudo registrar BG Sync:", e);
   }
+}
+
+self.addEventListener("online", () => {
+  console.log("[SW] ONLINE → Sync start");
+  syncApiQueue();
+  syncPhotoQueue();
+});
+
+
 
   console.warn("[SW] API guardada offline:", req.url);
 
@@ -207,14 +217,17 @@ function getApiQueueEntries() {
 async function syncApiQueue() {
   console.log("%c[SW] syncApiQueue START 🚀", "color: yellow; font-weight: bold");
 
-  // 1️⃣ Leer TODA la cola en memoria
+  // 🆕 Forzar sincronizar fotos primero para evitar 422
+  console.log("%c[SW] Ejecutando syncPhotoQueue ANTES de API", "color: cyan; font-weight: bold");
+  await syncPhotoQueue();
+
+  // 1️⃣ Leer TODA la cola API en memoria
   const entries = await getApiQueueEntries();
   console.log("[SW] Entries to sync:", entries.length);
 
   for (const { key, value } of entries) {
     console.log("[SW] Processing entry key:", key, "value:", value);
 
-    // Validar entrada
     if (!value || typeof value !== "object" || !value.url) {
       console.warn("[SW] Invalid entry, deleting...", key, value);
       await deleteApiQueueEntry(key);
@@ -228,38 +241,35 @@ async function syncApiQueue() {
       const res = await fetch(url, {
         method,
         headers,
-        body:
-          method === "GET" || method === "HEAD"
-            ? undefined
-            : body, // ya es string JSON
+        body: (method === "GET" || method === "HEAD") ? undefined : body,
       });
 
       console.log("%c[SW] Response:", "color: lightgreen", res.status, url);
 
       if (!res.ok) {
         console.warn(
-          "%c[SW] Server error, stopping sync ⚠",
+          "%c[SW] Server error, deteniendo la sync ⚠",
           "color: orange",
           res.status,
           url
         );
-        break; // paramos sync, reintentará después
+        break;
       }
 
-      // 2️⃣ Si todo salió bien, borramos esta entrada en otra tx
       await deleteApiQueueEntry(key);
     } catch (err) {
       console.error(
-        "%c[SW] Network / fetch ERROR ❌, stopping sync",
+        "%c[SW] Fetch ERROR ❌, deteniendo la sync",
         "color: red",
         err
       );
-      break; // red mala → salimos, BG Sync reintentará luego
+      break;
     }
   }
 
   console.log("%c[SW] syncApiQueue FINISHED 🟢", "color: lime; font-weight: bold");
 }
+
 
 /* Helper para borrar una entrada por key en una transacción corta */
 function deleteApiQueueEntry(key) {
@@ -285,18 +295,21 @@ function deleteApiQueueEntry(key) {
 
 
 
+/* Procesar cola de fotos */
+/* Procesar cola de fotos (versión correcta con IDBRequest) */
 async function syncPhotoQueue() {
+  console.log("[SW] syncPhotoQueue START 📸");
+
   const db = await openDB();
   const tx = db.transaction(PHOTO_QUEUE, "readwrite");
   const store = tx.objectStore(PHOTO_QUEUE);
 
-  console.log("%c[SW] syncPhotoQueue START 📸", "color: cyan; font-weight: bold");
-
-  const req = store.openCursor();
-
   return new Promise((resolve) => {
+    const req = store.openCursor();
+    console.log("[SW] openCursor() lanzado sobre PHOTO_QUEUE");
+
     req.onerror = () => {
-      console.error("[SW] Error leyendo PHOTO_QUEUE:", req.error);
+      console.error("[SW] Error al abrir cursor de PHOTO_QUEUE:", req.error);
       resolve();
     };
 
@@ -304,36 +317,64 @@ async function syncPhotoQueue() {
       const cursor = req.result;
 
       if (!cursor) {
-        console.log("%c[SW] syncPhotoQueue FINISHED 🟢", "color: lime");
+        console.log("[SW] No hay más fotos en cola");
         resolve();
         return;
       }
 
-      const p = cursor.value;
+      const entry = cursor.value;
+      const key = cursor.primaryKey ?? cursor.key;
+      console.log("[SW] Cursor Read:", { key, entry });
 
-      if (!p || !p.file) {
-        console.warn("[SW] Foto inválida, borrando entrada...");
+      if (!entry?.file || !entry?.url) {
+        console.warn("[SW] Entrada inválida → borrando key:", key);
         cursor.delete();
         cursor.continue();
         return;
       }
 
-      console.log("[SW] Uploading photo:", p.name);
-
+      // 📤 Preparar FormData correctamente
       const form = new FormData();
-      form.append("photo", p.file, p.name);
+      form.append("photo", entry.file, entry.name);
+      if (entry.caption) form.append("caption", entry.caption);
+      form.append("taken_at", entry.created_at || new Date().toISOString());
+
+      console.log("[SW] FormData keys:", Array.from(form.keys()));
+
+      // 🧽 Limpiar headers
+      const headers = entry.headers ? { ...entry.headers } : {};
+      delete headers["Content-Type"]; // 🚫 Muy importante
+
+      console.log("[SW] 📤 Subiendo foto a:", entry.url);
 
       try {
-        const res = await fetch(p.url, { method: "POST", body: form });
-        console.log("[SW] Photo uploaded:", p.name);
-        cursor.delete();
-      } catch (e) {
-        console.warn("[SW] Error subiendo foto, se detiene sync:", e);
-        resolve(); // 🔥 si falla la red, paramos aquí
-        return;
-      }
+        const res = await fetch(entry.url, {
+          method: "POST",
+          headers,
+          body: form,
+        });
 
-      cursor.continue();
+        console.log("[SW] Server Response (foto):", res.status);
+
+        if (!res.ok) {
+          console.error("[SW] ❌ Falló la subida → se reintentará");
+          resolve();
+          return;
+        }
+
+        console.log("[SW] ✔ Foto enviada OK, borrando key:", key);
+
+        try {
+          cursor.delete();
+        } catch (e) {
+          console.warn("[SW] Error deleting cursor:", e);
+        }
+
+        cursor.continue(); // 👉 seguimos con la siguiente foto
+      } catch (err) {
+        console.error("[SW] ❌ Error de red → retry later:", err);
+        resolve();
+      }
     };
   });
 }

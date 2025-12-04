@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 
 const DB_NAME = "audit-offline-db";
-const DB_VERSION = 6;
+const DB_VERSION = 9;
 const API_QUEUE = "api-queue";
 const PHOTO_QUEUE = "photo-queue";
 
