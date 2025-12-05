@@ -11,6 +11,15 @@ import {
   IonText,
   IonChip,
   IonIcon,
+  IonCard,
+  IonCardContent,
+  IonGrid,
+  IonRow,
+  IonCol,
+  IonHeader,
+  IonToolbar,
+  IonTitle,
+  IonButtons,
 } from "@ionic/react";
 
 import {
@@ -20,6 +29,7 @@ import {
   playOutline,
   logOutOutline,
   personCircleOutline,
+  refreshOutline,
 } from "ionicons/icons";
 
 import api from "../../services/api";
@@ -49,18 +59,23 @@ const Assignments: React.FC = () => {
     if (!user) return;
 
     setLoading(true);
-    const resp = await api.get(`/assignments?technician_id=${user.id}`);
-    const base = resp.data.data || resp.data;
+    try {
+      const resp = await api.get(`/assignments?technician_id=${user.id}`);
+      const base = resp.data.data || resp.data;
 
-    const withAudit = await Promise.all(
-      base.map(async (a: Assignment) => {
-        const audit = await AuditService.findByAssignment(a.id, user.id);
-        return { ...a, audit };
-      })
-    );
+      const withAudit = await Promise.all(
+        base.map(async (a: Assignment) => {
+          const audit = await AuditService.findByAssignment(a.id, user.id);
+          return { ...a, audit };
+        })
+      );
 
-    setAssignments(withAudit);
-    setLoading(false);
+      setAssignments(withAudit);
+    } catch (error) {
+      console.error("Error fetching assignments", error);
+    } finally {
+      setLoading(false);
+    }
   }
 
   async function startAudit(a: Assignment) {
@@ -93,132 +108,269 @@ const Assignments: React.FC = () => {
 
   return (
     <IonPage>
-      <IonContent className="ion-padding bg-darkBg text-white font-poppins">
-
-        {/* HEADER */}
-        <div className="flex justify-between items-center mb-6">
-          <div className="flex items-center gap-2">
-            <IonIcon icon={personCircleOutline} className="text-primaryRed text-3xl" />
-            <h1 className="text-xl font-bold">
-              Hola, {user?.name.split(" ")[0]}
-            </h1>
-          </div>
-
-          <IonButton
-            size="small"
-            fill="clear"
-            onClick={logout}
-            className="text-red-500"
-          >
-            <IonIcon icon={logOutOutline} className="text-2xl" />
-          </IonButton>
-        </div>
-
-        <div className="flex items-center justify-between mb-3">
-  <h2 className="text-lg font-extrabold uppercase tracking-wide text-primaryRed">
-    Mis Asignaciones
-  </h2>
-
-  <IonButton
-    fill="clear"
-    className="text-white bg-gray-700 hover:bg-gray-600 rounded-full px-3 py-1 
-               transition-all flex items-center gap-2 shadow-md"
-    onClick={fetchAssignments}
-    color="medium"
-  >
-    <IonIcon className="text-lg" />
-    Recargar
-  </IonButton>
-</div>
-
-
-        {loading && <IonText>Cargando...</IonText>}
-        {!loading && assignments.length === 0 && (
-          <IonText>No tienes asignaciones pendientes.</IonText>
-        )}
-
-        {/* ASSIGNMENTS GRID */}
-        <IonList className="bg-transparent space-y-4">
-          {assignments.map((a) => (
-            <div
-              key={a.id}
-              className="bg-[#111] border border-primaryRed/30 rounded-2xl p-4 
-                        shadow-md hover:shadow-primaryRed/20 transition-all w-full"
-            >
-              {/* Header herramienta */}
-              <div className="flex items-center gap-2 mb-3">
-                <IonIcon icon={constructOutline} className="text-primaryRed text-2xl" />
-                <h2 className="font-bold text-lg">{a.line.name}</h2>
-              </div>
-
-              {/* Turno y estado */}
-              <div className="flex gap-2 mb-3 flex-wrap">
-                <IonChip className="bg-primaryRed text-white font-semibold px-3 rounded-full">
-                  <IonIcon icon={timeOutline} className="mr-1" />
-                  <IonLabel>Turno {a.shift}</IonLabel>
-                </IonChip>
-
-                {a.audit?.status && (
-                  <IonChip
-                    className={`font-semibold px-3 rounded-full 
-                      ${
-                        a.audit.status === "in_progress" && "bg-yellow-500 text-black"
-                      }
-                      ${
-                        a.audit.status === "submitted" && "bg-blue-500 text-white"
-                      }
-                      ${
-                        a.audit.status === "reviewed" && "bg-green-600 text-white"
-                      }
-                      ${
-                        a.audit.status === "closed" && "bg-gray-500 text-white"
-                      }
-                    `}
-                  >
-                    {a.audit.status.replace("_", " ").toUpperCase()}
-                  </IonChip>
-                )}
-              </div>
-
-              {/* Notas */}
-              {a.notes && (
-                <div className="bg-black/40 border border-primaryRed/20 rounded-lg px-3 py-2 mb-3">
-                  <p className="text-gray-300 text-sm leading-snug">
-                    📝 {a.notes}
-                  </p>
+      <IonContent fullscreen>
+        <div
+          style={{
+            minHeight: "100%",
+            background:
+              "linear-gradient(135deg, #000000 0%, #1a1a1a 50%, #4a0404 100%)",
+            padding: "20px",
+          }}
+        >
+          <IonGrid fixed>
+            {/* HEADER */}
+            <IonRow className="ion-align-items-center ion-margin-bottom">
+              <IonCol size="8">
+                <div
+                  style={{ display: "flex", alignItems: "center", gap: "10px" }}
+                >
+                  <IonIcon
+                    icon={personCircleOutline}
+                    style={{ fontSize: "2.5rem", color: "#C8102E" }}
+                  />
+                  <div>
+                    <IonText color="light">
+                      <h2
+                        style={{
+                          margin: 0,
+                          fontWeight: "bold",
+                          fontSize: "1.2rem",
+                        }}
+                      >
+                        Hola, {user?.name.split(" ")[0]}
+                      </h2>
+                      <p
+                        style={{ margin: 0, opacity: 0.7, fontSize: "0.9rem" }}
+                      >
+                        Técnico
+                      </p>
+                    </IonText>
+                  </div>
                 </div>
-              )}
+              </IonCol>
+              <IonCol size="4" className="ion-text-end">
+                <IonButton
+                  fill="clear"
+                  onClick={logout}
+                  style={{ color: "#fff", "--ripple-color": "#C8102E" }}
+                >
+                  <IonIcon slot="icon-only" icon={logOutOutline} />
+                </IonButton>
+              </IonCol>
+            </IonRow>
 
-              {/* Botón */}
-             <div className="w-full flex justify-end mt-4">
-                {a.audit ? (
-                  <IonButton
-                    fill="solid"
-                    className="bg-gray-700 hover:bg-gray-600 transition-all
-                              text-white font-bold rounded-full px-4 py-2
-                              flex items-center gap-2 shadow-md"
-                    onClick={() => (window.location.href = `/audit/${a.audit.id}`)}
+            {/* TITLE & REFRESH */}
+            <IonRow className="ion-align-items-center ion-margin-bottom">
+              <IonCol>
+                <IonText color="light">
+                  <h1
+                    style={{
+                      fontWeight: "800",
+                      fontSize: "1.8rem",
+                      margin: 0,
+                      letterSpacing: "1px",
+                    }}
                   >
-                    <IonIcon icon={eyeOutline} className="text-lg" />
-                    Continuar
-                  </IonButton>
-                ) : (
-                  <IonButton
-                    fill="solid"
-                    className="bg-primaryRed hover:bg-red-600 transition-all
-                              text-white font-bold rounded-full px-4 py-2
-                              flex items-center gap-2 shadow-md"
-                    onClick={() => startAudit(a)}
-                  >
-                    <IonIcon icon={playOutline} className="text-lg" />
-                    Iniciar
-                  </IonButton>
-                )}
+                    MIS ASIGNACIONES
+                  </h1>
+                </IonText>
+              </IonCol>
+              <IonCol size="auto">
+                <IonButton
+                  size="small"
+                  fill="outline"
+                  shape="round"
+                  onClick={fetchAssignments}
+                  style={{
+                    "--border-color": "rgba(255,255,255,0.3)",
+                    color: "#fff",
+                    fontSize: "0.8rem",
+                  }}
+                >
+                  <IonIcon slot="start" icon={refreshOutline} />
+                  Recargar
+                </IonButton>
+              </IonCol>
+            </IonRow>
+
+            {loading && (
+              <div className="ion-text-center ion-padding">
+                <IonText color="medium">Cargando asignaciones...</IonText>
               </div>
+            )}
 
-            </div>
-          ))}
-        </IonList>
+            {!loading && assignments.length === 0 && (
+              <div className="ion-text-center ion-padding">
+                <IonText color="medium">
+                  No tienes asignaciones pendientes.
+                </IonText>
+              </div>
+            )}
+
+            {/* ASSIGNMENTS LIST */}
+            {assignments.map((a) => (
+              <IonCard
+                key={a.id}
+                style={{
+                  background: "rgba(255, 255, 255, 0.05)",
+                  backdropFilter: "blur(10px)",
+                  border: "1px solid rgba(255, 255, 255, 0.1)",
+                  borderRadius: "16px",
+                  boxShadow: "0 4px 16px rgba(0, 0, 0, 0.3)",
+                  marginBottom: "16px",
+                  marginInline: "0",
+                }}
+              >
+                <IonCardContent>
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "start",
+                      marginBottom: "12px",
+                    }}
+                  >
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "10px",
+                      }}
+                    >
+                      <div
+                        style={{
+                          background: "rgba(200, 16, 46, 0.2)",
+                          padding: "8px",
+                          borderRadius: "50%",
+                          display: "flex",
+                        }}
+                      >
+                        <IonIcon
+                          icon={constructOutline}
+                          style={{ color: "#C8102E", fontSize: "1.5rem" }}
+                        />
+                      </div>
+                      <IonText color="light">
+                        <h2
+                          style={{
+                            margin: 0,
+                            fontWeight: "bold",
+                            fontSize: "1.2rem",
+                          }}
+                        >
+                          {a.line.name}
+                        </h2>
+                        <p
+                          style={{
+                            margin: 0,
+                            opacity: 0.6,
+                            fontSize: "0.9rem",
+                          }}
+                        >
+                          {a.line.code}
+                        </p>
+                      </IonText>
+                    </div>
+
+                    <IonChip
+                      style={{
+                        background: "rgba(255,255,255,0.1)",
+                        color: "#fff",
+                        margin: 0,
+                        border: "1px solid rgba(255,255,255,0.1)",
+                      }}
+                    >
+                      <IonIcon icon={timeOutline} color="light" />
+                      <IonLabel>Turno {a.shift}</IonLabel>
+                    </IonChip>
+                  </div>
+
+                  {a.audit?.status && (
+                    <div style={{ marginBottom: "12px" }}>
+                      <IonChip
+                        style={{
+                          background:
+                            a.audit.status === "in_progress"
+                              ? "#e0ac08"
+                              : a.audit.status === "submitted"
+                              ? "#3dc2ff"
+                              : a.audit.status === "reviewed"
+                              ? "#2dd36f"
+                              : "#92949c",
+                          color: "#000",
+                          fontWeight: "bold",
+                          margin: 0,
+                        }}
+                      >
+                        <IonLabel>
+                          {a.audit.status.replace("_", " ").toUpperCase()}
+                        </IonLabel>
+                      </IonChip>
+                    </div>
+                  )}
+
+                  {a.notes && (
+                    <div
+                      style={{
+                        background: "rgba(0,0,0,0.3)",
+                        padding: "10px",
+                        borderRadius: "8px",
+                        marginBottom: "16px",
+                        borderLeft: "3px solid #C8102E",
+                      }}
+                    >
+                      <IonText color="medium" style={{ fontSize: "0.9rem" }}>
+                        {a.notes}
+                      </IonText>
+                    </div>
+                  )}
+
+                  <div
+                    style={{
+                      display: "flex",
+                      justifyContent: "flex-end",
+                      marginTop: "10px",
+                    }}
+                  >
+                    {a.audit ? (
+                      <IonButton
+                        fill="solid"
+                        shape="round"
+                        onClick={() =>
+                          (window.location.href = `/audit/${a.audit.id}`)
+                        }
+                        style={{
+                          "--background": "#505050",
+                          height: "40px",
+                          fontWeight: "600",
+                        }}
+                      >
+                        <IonIcon slot="start" icon={eyeOutline} />
+                        Continuar
+                      </IonButton>
+                    ) : (
+                      <IonButton
+                        fill="solid"
+                        shape="round"
+                        onClick={() => startAudit(a)}
+                        style={{
+                          "--background":
+                            "linear-gradient(90deg, #C8102E 0%, #9b0c23 100%)",
+                          "--box-shadow": "0 4px 10px rgba(200, 16, 46, 0.3)",
+                          height: "40px",
+                          fontWeight: "600",
+                        }}
+                      >
+                        <IonIcon slot="start" icon={playOutline} />
+                        Iniciar
+                      </IonButton>
+                    )}
+                  </div>
+                </IonCardContent>
+              </IonCard>
+            ))}
+          </IonGrid>
+        </div>
       </IonContent>
     </IonPage>
   );

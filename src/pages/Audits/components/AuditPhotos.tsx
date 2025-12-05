@@ -1,7 +1,8 @@
 // src/pages/Audits/components/AuditPhotos.tsx
 
 import React, { useRef } from "react";
-import { IonButton } from "@ionic/react";
+import { IonButton, IonIcon } from "@ionic/react";
+import { cameraOutline } from "ionicons/icons";
 
 interface AuditPhoto {
   url: string;
@@ -27,7 +28,16 @@ const AuditPhotos: React.FC<Props> = ({ photos, onAddPhoto, readOnly }) => {
 
   return (
     <div>
-      <h3 className="text-lg font-bold mb-2">Fotografía</h3>
+      <h3
+        style={{
+          color: "#fff",
+          fontWeight: "bold",
+          fontSize: "1.1rem",
+          marginBottom: "12px",
+        }}
+      >
+        Fotografía
+      </h3>
 
       {!readOnly && !hasPhoto && (
         <>
@@ -41,27 +51,51 @@ const AuditPhotos: React.FC<Props> = ({ photos, onAddPhoto, readOnly }) => {
           />
           <IonButton
             expand="block"
-            className="bg-primaryRed text-white font-bold rounded-xl"
+            fill="outline"
+            shape="round"
             onClick={() => fileInputRef.current?.click()}
+            style={{
+              "--border-color": "#C8102E",
+              "--color": "#C8102E",
+              fontWeight: "bold",
+              height: "48px",
+              marginTop: "8px",
+            }}
           >
+            <IonIcon slot="start" icon={cameraOutline} />
             Tomar / Subir foto
           </IonButton>
         </>
       )}
 
       {hasPhoto && (
-        <div className="relative mt-3">
+        <div style={{ position: "relative", marginTop: "12px" }}>
           <img
             src={photo.url}
             alt="Foto de auditoría"
-            className="w-full rounded-xl object-cover border border-gray-700 shadow"
+            style={{
+              width: "100%",
+              borderRadius: "12px",
+              objectFit: "cover",
+              border: "1px solid rgba(255,255,255,0.2)",
+              boxShadow: "0 4px 10px rgba(0,0,0,0.3)",
+            }}
           />
 
           {/* 🔥 Estado visual del archivo */}
           <span
-            className={`absolute top-2 right-2 px-2 py-1 text-xs rounded-lg font-bold
-            ${photo.synced ? "bg-green-600 text-white" : "bg-yellow-500 text-black animate-pulse"}
-          `}
+            style={{
+              position: "absolute",
+              top: "10px",
+              right: "10px",
+              padding: "6px 12px",
+              borderRadius: "8px",
+              fontSize: "0.8rem",
+              fontWeight: "bold",
+              background: photo.synced ? "#28a745" : "#ffc107",
+              color: photo.synced ? "#fff" : "#000",
+              boxShadow: "0 2px 5px rgba(0,0,0,0.3)",
+            }}
           >
             {photo.synced ? "Sincronizada ✔" : "Pendiente ⏳"}
           </span>
