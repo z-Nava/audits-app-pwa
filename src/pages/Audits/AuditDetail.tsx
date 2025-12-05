@@ -33,7 +33,6 @@ import {
   sendOutline,
 } from "ionicons/icons";
 
-// 👇 Tipo local para manejar estado visual de cada foto
 interface AuditPhoto {
   url: string;
   synced: boolean;
@@ -61,7 +60,6 @@ const AuditDetail: React.FC = () => {
       const data = await AuditService.getAudit(Number(id));
       setAudit(data);
 
-      // Tomamos el primer ítem o lo creamos si no existe
       let auditItem: AuditItem | null = data.items?.[0] ?? null;
 
       if (!auditItem) {
@@ -70,13 +68,11 @@ const AuditDetail: React.FC = () => {
       }
 
       setItem(auditItem);
-      // Si quisieras, aquí podrías cargar fotos ya existentes del backend
     } finally {
       setLoading(false);
     }
   }
 
-  // 🔹 Cambiar RESULTADO
   async function handleResultChange(result: "PASS" | "FAIL" | "NA") {
     if (!item || readOnly) return;
 
@@ -94,17 +90,14 @@ const AuditDetail: React.FC = () => {
     }
   }
 
-  // 🔹 Comentarios: SOLO actualizamos estado local (el submit ya envía todo)
   function handleCommentsChange(text: string) {
     if (!item) return;
     setItem({ ...item, comments: text });
   }
 
-  // 📸 Subir UNA foto (offline/online)
   async function addPhoto(file: File) {
     if (!item) return;
 
-    // OFFLINE → guardamos en IndexedDB y mostramos como "Pendiente"
     if (!isOnline) {
       await savePhotoOffline({
         audit_item_id: item.id,
@@ -115,16 +108,12 @@ const AuditDetail: React.FC = () => {
 
       const localUrl = URL.createObjectURL(file);
 
-      setPhotos((prev) => [
-        ...prev,
-        { url: localUrl, synced: false }, // 🔴 pendiente de sync
-      ]);
+      setPhotos((prev) => [...prev, { url: localUrl, synced: false }]);
 
-      alert("📌 Foto guardada offline. Se subirá al recuperar conexión.");
+      alert("Foto guardada offline. Se subirá al recuperar conexión.");
       return;
     }
 
-    // ONLINE → flujo normal hacia API
     const form = new FormData();
     form.append("photo", file);
 
@@ -132,16 +121,27 @@ const AuditDetail: React.FC = () => {
       headers: { "Content-Type": "multipart/form-data" },
     });
 
+    let photoUrl = resp.data.url || resp.data.path;
+    if (
+      photoUrl &&
+      !photoUrl.startsWith("http") &&
+      !photoUrl.startsWith("blob:")
+    ) {
+      const apiBase =
+        (import.meta as any).env?.VITE_API_BASE || "http://localhost:8000";
+      const host = apiBase.replace(/\/api\/v1\/?$/, "");
+      photoUrl = `${host}/${photoUrl.replace(/^\//, "")}`;
+    }
+
     setPhotos((prev) => [
       ...prev,
       {
-        url: resp.data.url || resp.data.path,
+        url: photoUrl,
         synced: true,
       },
     ]);
   }
 
-  // 🔴 Botón FINAL: guarda todo + envía auditoría
   async function submitAudit() {
     if (!audit || !item) return;
 
@@ -158,10 +158,16 @@ const AuditDetail: React.FC = () => {
 
     setLoading(true);
     try {
-      await AuditService.updateItem(item.id, payload);
-      await AuditService.submitAudit(audit.id);
-
-      alert("Auditoría enviada correctamente");
+      const itemResp = await AuditService.updateItem(item.id, payload);
+      const auditResp = await AuditService.submitAudit(audit.id);
+      const isOffline = itemResp?.offline || auditResp?.offline;
+      if (isOffline) {
+        alert(
+          "Estás offline. La auditoría se ha guardado y se enviará automáticamente cuando recuperes la conexión."
+        );
+      } else {
+        alert("Auditoría enviada correctamente.");
+      }
       history.push("/assignments");
     } catch (e: any) {
       console.error("Error al enviar auditoría", e);
@@ -210,7 +216,7 @@ const AuditDetail: React.FC = () => {
                 fontWeight: "bold",
               }}
             >
-              🔴 Offline — Progreso guardado localmente
+              Offline — Progreso guardado localmente
             </div>
           ) : pending ? (
             <div
@@ -224,7 +230,7 @@ const AuditDetail: React.FC = () => {
                 fontWeight: "bold",
               }}
             >
-              🟡 Sincronizando cambios…
+              Sincronizando cambios…
             </div>
           ) : (
             <div
@@ -239,7 +245,7 @@ const AuditDetail: React.FC = () => {
                 fontWeight: "bold",
               }}
             >
-              🟢 Todo sincronizado ✔
+              Todo sincronizado ✔
             </div>
           )}
 

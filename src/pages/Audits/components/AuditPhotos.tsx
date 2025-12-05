@@ -55,14 +55,18 @@ const AuditPhotos: React.FC<Props> = ({ photos, onAddPhoto, readOnly }) => {
             shape="round"
             onClick={() => fileInputRef.current?.click()}
             style={{
-              "--border-color": "#C8102E",
-              "--color": "#C8102E",
+              "--border-color": "rgba(255, 255, 255, 0.5)",
+              color: "#fff",
               fontWeight: "bold",
               height: "48px",
               marginTop: "8px",
             }}
           >
-            <IonIcon slot="start" icon={cameraOutline} />
+            <IonIcon
+              slot="start"
+              icon={cameraOutline}
+              style={{ fontSize: "1.5rem" }}
+            />
             Tomar / Subir foto
           </IonButton>
         </>
@@ -75,6 +79,8 @@ const AuditPhotos: React.FC<Props> = ({ photos, onAddPhoto, readOnly }) => {
             alt="Foto de auditoría"
             style={{
               width: "100%",
+              minHeight: "200px",
+              backgroundColor: "rgba(255, 255, 255, 0.05)",
               borderRadius: "12px",
               objectFit: "cover",
               border: "1px solid rgba(255,255,255,0.2)",
@@ -82,7 +88,6 @@ const AuditPhotos: React.FC<Props> = ({ photos, onAddPhoto, readOnly }) => {
             }}
           />
 
-          {/* 🔥 Estado visual del archivo */}
           <span
             style={{
               position: "absolute",
@@ -97,7 +102,7 @@ const AuditPhotos: React.FC<Props> = ({ photos, onAddPhoto, readOnly }) => {
               boxShadow: "0 2px 5px rgba(0,0,0,0.3)",
             }}
           >
-            {photo.synced ? "Sincronizada ✔" : "Pendiente ⏳"}
+            {photo.synced ? "Sincronizada" : "Pendiente"}
           </span>
         </div>
       )}
