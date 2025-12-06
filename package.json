@@ -27,6 +27,7 @@
     "ionicons": "^7.4.0",
     "react": "19.0.0",
     "react-dom": "19.0.0",
+    "react-google-recaptcha": "^3.1.0",
     "react-router": "^5.3.4",
     "react-router-dom": "^5.3.4",
     "zustand": "^5.0.8"
@@ -39,6 +40,7 @@
     "@testing-library/user-event": "^14.4.3",
     "@types/react": "19.0.10",
     "@types/react-dom": "19.0.4",
+    "@types/react-google-recaptcha": "^2.1.9",
     "@vitejs/plugin-legacy": "^7.2.1",
     "@vitejs/plugin-react": "^4.0.1",
     "cypress": "^13.5.0",

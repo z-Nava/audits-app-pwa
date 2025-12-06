@@ -2,9 +2,9 @@
     DISEÑO GENERAL MILWAUKEE
 =========================== */
 :root {
-  --primary-red: #C8102E;
+  --primary-red: #c8102e;
   --dark-bg: #0d0d0d;
-  --card-bg: #1A1A1A;
+  --card-bg: #1a1a1a;
   --text-light: #fff;
 }
 
@@ -13,7 +13,7 @@ body,
 .audits-bg {
   background: var(--dark-bg);
   color: var(--text-light);
-  font-family: 'Poppins', sans-serif;
+  font-family: "Poppins", sans-serif;
 }
 
 /* ===========================
@@ -41,7 +41,7 @@ body,
 
 .card-audit:hover {
   transform: translateY(-4px);
-  box-shadow: 0px 0px 20px rgba(200,16,46,0.25);
+  box-shadow: 0px 0px 20px rgba(200, 16, 46, 0.25);
 }
 
 /* Texto y chips */
@@ -51,7 +51,7 @@ body,
 }
 
 .audit-info {
-  opacity: .8;
+  opacity: 0.8;
   margin-bottom: 8px;
 }
 
@@ -122,4 +122,147 @@ ion-button {
   color: black;
   opacity: 1;
   box-shadow: 0 0 10px rgba(108, 117, 125, 0.6);
+}
+
+/* ===========================
+    INPUT NUMBER NO SPINNER
+=========================== */
+/* ===========================
+    DISEÑO GENERAL MILWAUKEE
+=========================== */
+:root {
+  --primary-red: #c8102e;
+  --dark-bg: #0d0d0d;
+  --card-bg: #1a1a1a;
+  --text-light: #fff;
+}
+
+body,
+.ion-page,
+.audits-bg {
+  background: var(--dark-bg);
+  color: var(--text-light);
+  font-family: "Poppins", sans-serif;
+}
+
+/* ===========================
+    TITULOS
+=========================== */
+.title-primary {
+  font-size: 26px;
+  font-weight: 800;
+  text-transform: uppercase;
+  margin-bottom: 18px;
+  color: var(--text-light);
+  border-left: 6px solid var(--primary-red);
+  padding-left: 10px;
+}
+
+/* ===========================
+    AUDIT CARDS
+=========================== */
+.card-audit {
+  background: var(--card-bg);
+  border-radius: 18px;
+  border: 1px solid rgba(200, 16, 46, 0.3);
+  transition: 0.2s ease-in-out;
+}
+
+.card-audit:hover {
+  transform: translateY(-4px);
+  box-shadow: 0px 0px 20px rgba(200, 16, 46, 0.25);
+}
+
+/* Texto y chips */
+.audit-title {
+  font-size: 18px;
+  font-weight: bold;
+}
+
+.audit-info {
+  opacity: 0.8;
+  margin-bottom: 8px;
+}
+
+.result-chip,
+.chip-status {
+  font-weight: bold;
+  text-transform: uppercase;
+}
+
+/* Button */
+ion-button {
+  --background: var(--primary-red);
+  font-weight: bold;
+  border-radius: 14px;
+}
+
+/* Center util class */
+.center {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* Estilo base del botón */
+.btn-result {
+  width: 100%;
+  padding: 12px 0;
+  border-radius: 12px;
+  font-weight: bold;
+  color: white;
+  border: none;
+  cursor: pointer;
+  transition: 0.2s ease-in-out;
+}
+
+/* PASS */
+.btn-pass {
+  background-color: #1e7e34; /* verde oscuro */
+  opacity: 0.6;
+}
+
+.btn-pass-active {
+  background-color: #28a745; /* verde */
+  opacity: 1;
+  box-shadow: 0 0 10px rgba(40, 167, 69, 0.6);
+}
+
+/* FAIL */
+.btn-fail {
+  background-color: #8b0000; /* rojo oscuro */
+  opacity: 0.6;
+}
+
+.btn-fail-active {
+  background-color: #dc3545; /* rojo */
+  opacity: 1;
+  box-shadow: 0 0 10px rgba(220, 53, 69, 0.6);
+}
+
+/* N/A */
+.btn-na {
+  background-color: #6c757d; /* gris */
+  opacity: 0.6;
+}
+
+.btn-na-active {
+  background-color: #bfc3c5; /* gris claro */
+  color: black;
+  opacity: 1;
+  box-shadow: 0 0 10px rgba(108, 117, 125, 0.6);
+}
+
+/* ===========================
+    INPUT NUMBER NO SPINNER
+=========================== */
+.custom-verify-input input::-webkit-outer-spin-button,
+.custom-verify-input input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.custom-verify-input input[type="number"] {
+  -moz-appearance: textfield;
+  appearance: textfield;
 }

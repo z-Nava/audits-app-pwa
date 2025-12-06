@@ -8,10 +8,11 @@ export interface AuthResponse {
 }
 
 export const AuthService = {
-  async login(login: string, password: string) {
+  async login(login: string, password: string, recaptcha_token: string) {
     const response = await api.post<AuthResponse>("/auth/login", {
       login,
       password,
+      recaptcha_token,
       device_name: "pwa",
     });
 
@@ -19,8 +20,15 @@ export const AuthService = {
   },
 
   async logout() {
-    // opcional, lo dejamos listo para después
     await api.post("/auth/logout");
+  },
+
+  async verifyCode(code: string, email: string) {
+    const response = await api.post<AuthResponse>("/auth/verify-code", {
+      code,
+      email,
+    });
+    return response;
   },
 };
 

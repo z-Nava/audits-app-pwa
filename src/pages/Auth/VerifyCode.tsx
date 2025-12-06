@@ -1,5 +1,4 @@
 import React, { useState } from "react";
-import { useHistory } from "react-router-dom";
 import {
   IonPage,
   IonContent,
@@ -14,43 +13,44 @@ import {
   IonCol,
   IonText,
 } from "@ionic/react";
-import { personCircleOutline, logInOutline } from "ionicons/icons";
+import { keyOutline, checkmarkCircleOutline } from "ionicons/icons";
 import useUserStore from "../../store/userStore";
 import { AuthService } from "../../services/AuthService";
-import ReCAPTCHA from "react-google-recaptcha";
+import { useHistory, useLocation } from "react-router-dom";
 
-const Login: React.FC = () => {
-  const history = useHistory();
+const VerifyCode: React.FC = () => {
   const loginStore = useUserStore((s) => s.login);
-
-  const [loginField, setLoginField] = useState("");
-  const [password, setPassword] = useState("");
+  const history = useHistory();
+  const location = useLocation<{ email: string }>();
+  const [code, setCode] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
 
-  async function handleLogin() {
+  async function handleVerify() {
     try {
       setError("");
       setLoading(true);
-
-      if (!captchaToken) {
-        setError("Por favor completa el captcha");
+      if (!code || code.length < 4) {
+        setError("Código inválido");
+        setLoading(false);
+        return;
+      }
+      const email = localStorage.getItem("temp_email");
+      if (!email) {
+        setError(
+          "Sesión expirada o email no encontrado. Vuelve a iniciar sesión."
+        );
         setLoading(false);
         return;
       }
 
-      const response = await AuthService.login(
-        loginField,
-        password,
-        captchaToken
-      );
-      // loginStore(response.data.token, response.data.user);
+      const response = await AuthService.verifyCode(code, email);
+      loginStore(response.data.token, response.data.user);
 
-      localStorage.setItem("temp_email", loginField);
-      history.push("/verify-code");
+      localStorage.removeItem("temp_email");
+      window.location.href = "/assignments";
     } catch (err) {
-      setError("Credenciales incorrectas o error de conexión");
+      setError("Código incorrecto, intenta de nuevo");
     } finally {
       setLoading(false);
     }
@@ -85,7 +85,7 @@ const Login: React.FC = () => {
                   <IonCardContent>
                     <div className="ion-text-center ion-margin-bottom">
                       <IonIcon
-                        icon={personCircleOutline}
+                        icon={keyOutline}
                         style={{
                           fontSize: "5rem",
                           color: "#ffffff",
@@ -101,67 +101,56 @@ const Login: React.FC = () => {
                             letterSpacing: "1px",
                           }}
                         >
-                          Bienvenido
+                          Verificación
                         </h1>
                         <p style={{ color: "#a0a0a0", fontSize: "0.9rem" }}>
-                          Inicia sesión para continuar
+                          Ingresa el código enviado a tu correo
                         </p>
                       </IonText>
                     </div>
 
-                    <div className="ion-margin-top">
+                    <div className="ion-margin-top ion-margin-bottom">
+                      <div className="ion-text-center ion-margin-bottom">
+                        <IonText color="medium">
+                          <small>INGRESA EL CÓDIGO</small>
+                        </IonText>
+                      </div>
                       <IonInput
-                        className="ion-margin-bottom"
-                        label="Usuario o Email"
-                        labelPlacement="floating"
+                        max={6}
+                        min={6}
+                        className="custom-verify-input"
                         fill="outline"
-                        placeholder="Ingresa tu usuario"
-                        value={loginField}
-                        onIonInput={(e) => setLoginField(e.detail.value!)}
-                        style={{
-                          "--background": "rgba(0,0,0,0.2)",
-                          "--color": "#fff",
-                          "--placeholder-color": "#aaa",
-                          "--border-color": "rgba(255,255,255,0.2)",
-                          "--border-radius": "10px",
-                          color: "white",
+                        placeholder="000000"
+                        value={code}
+                        type="number"
+                        onIonInput={(e) => {
+                          const val = e.detail.value!;
+                          if (val.length > 6) {
+                            e.target.value = val.slice(0, 6);
+                            setCode(val.slice(0, 6));
+                          } else {
+                            setCode(val);
+                          }
                         }}
-                      />
-
-                      <IonInput
-                        className="ion-margin-bottom"
-                        label="Contraseña"
-                        labelPlacement="floating"
-                        fill="outline"
-                        type="password"
-                        placeholder="Ingresa tu contraseña"
-                        value={password}
-                        onIonInput={(e) => setPassword(e.detail.value!)}
                         onKeyDown={(e) => {
-                          if (e.key === "Enter") handleLogin();
+                          if (e.key === "Enter") handleVerify();
                         }}
                         style={{
-                          "--background": "rgba(0,0,0,0.2)",
-                          "--color": "#fff",
-                          "--placeholder-color": "#aaa",
-                          "--border-color": "rgba(255,255,255,0.2)",
-                          "--border-radius": "10px",
-                          color: "white",
+                          "--background": "rgba(0, 0, 0, 0.3)",
+                          "--color": "#ffffff",
+                          "--placeholder-color": "#555",
+                          "--border-color": "rgba(255, 255, 255, 0.2)",
+                          "--border-radius": "12px",
+                          "--border-width": "1px",
+                          "--padding-start": "10px",
+                          "--padding-end": "10px",
+                          textAlign: "center",
+                          fontSize: "2rem",
+                          letterSpacing: "1.5rem",
+                          fontWeight: "bold",
+                          fontFamily: "monospace",
+                          height: "70px",
                         }}
-                      />
-                    </div>
-
-                    <div
-                      className="ion-margin-top ion-margin-bottom ion-text-center"
-                      style={{ display: "flex", justifyContent: "center" }}
-                    >
-                      <ReCAPTCHA
-                        sitekey={
-                          import.meta.env.VITE_RECAPTCHA_SITE_KEY ||
-                          "6Lc6ViMsAAAAAHQtgeFBl2mitttN64MnD8i2wQZV"
-                        }
-                        onChange={(token) => setCaptchaToken(token)}
-                        theme="dark"
                       />
                     </div>
 
@@ -177,12 +166,12 @@ const Login: React.FC = () => {
                       expand="block"
                       shape="round"
                       className="ion-margin-top"
-                      onClick={handleLogin}
+                      onClick={handleVerify}
                       disabled={loading}
                       style={{
                         "--background":
-                          "linear-gradient(90deg, #C8102E 0%, #9b0c23 100%)",
-                        "--box-shadow": "0 4px 15px rgba(200, 16, 46, 0.4)",
+                          "linear-gradient(90deg, #10c842 0%, #0c9b2e 100%)", // Verde para verificación
+                        "--box-shadow": "0 4px 15px rgba(16, 200, 66, 0.4)",
                         fontWeight: "600",
                         letterSpacing: "0.5px",
                         height: "48px",
@@ -192,8 +181,8 @@ const Login: React.FC = () => {
                         <IonSpinner name="crescent" color="light" />
                       ) : (
                         <>
-                          <IonIcon slot="start" icon={logInOutline} />
-                          Entrar
+                          <IonIcon slot="start" icon={checkmarkCircleOutline} />
+                          Verificar
                         </>
                       )}
                     </IonButton>
@@ -208,4 +197,4 @@ const Login: React.FC = () => {
   );
 };
 
-export default Login;
+export default VerifyCode;

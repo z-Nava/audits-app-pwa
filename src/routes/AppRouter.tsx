@@ -7,6 +7,7 @@ import Audits from "../pages/Audits/Audits";
 import AuditDetail from "../pages/Audits/AuditDetail";
 import AuditItems from "../pages/Audits/AuditItems";
 import Assignments from "../pages/Assignments/Assignments";
+import VerifyCode from "../pages/Auth/VerifyCode";
 
 import useUserStore from "../store/userStore";
 
@@ -17,6 +18,10 @@ const AppRouter: React.FC = () => {
     <IonRouterOutlet>
       <Route path="/login" exact>
         <Login />
+      </Route>
+
+      <Route path="/verify-code" exact>
+        <VerifyCode />
       </Route>
 
       <Route path="/audits" exact>
@@ -30,7 +35,6 @@ const AppRouter: React.FC = () => {
       <Route path="/audit/:id" exact>
         {token ? <AuditDetail /> : <Redirect to="/login" />}
       </Route>
-
 
       <Route path="/audits/:id/items" exact>
         {token ? <AuditItems /> : <Redirect to="/login" />}
