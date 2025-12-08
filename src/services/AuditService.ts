@@ -1,8 +1,7 @@
 import api from "./api";
-import { AuditListResponse, Audit } from "../types/audits"
+import { AuditListResponse, Audit } from "../types/audits";
 
 export const AuditService = {
-
   async list(): Promise<AuditListResponse> {
     const response = await api.get<AuditListResponse>("/audits");
     return response.data;
@@ -16,7 +15,7 @@ export const AuditService = {
   async createItem(auditId: number, toolId: number) {
     const resp = await api.post(`/audits/${auditId}/items`, {
       tool_id: toolId,
-      result: "NA",   // Default aceptado por backend
+      result: "NA", // Default aceptado por backend
       comments: "",
     });
     return resp.data;
@@ -35,8 +34,14 @@ export const AuditService = {
   },
 
   async findByAssignment(assignmentId: number, technicianId: number) {
-    const resp = await api.get(`/audits?assignment_id=${assignmentId}&technician_id=${technicianId}`);
-      return resp.data.data?.[0] ?? null;
-  }
+    const resp = await api.get(
+      `/audits?assignment_id=${assignmentId}&technician_id=${technicianId}`
+    );
+    return resp.data.data?.[0] ?? null;
+  },
 
+  async getAssignments(technicianId: number) {
+    const resp = await api.get(`/assignments?technician_id=${technicianId}`);
+    return resp.data.data || resp.data;
+  },
 };

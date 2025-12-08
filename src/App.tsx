@@ -16,11 +16,14 @@ import "@ionic/react/css/flex-utils.css";
 import "@ionic/react/css/display.css";
 import "./theme/variables.css";
 import "./theme/auditStyles.css";
-
+import useAuditPolling from "./hooks/useAuditPolling";
+import ReloadPrompt from "./components/ReloadPrompt";
 
 const App: React.FC = () => {
+  useAuditPolling();
   return (
     <IonApp>
+      <ReloadPrompt />
       <IonReactRouter>
         <AppRouter />
       </IonReactRouter>

@@ -22,11 +22,14 @@ import {
   businessOutline,
   ribbonOutline,
   arrowForwardOutline,
+  arrowBackOutline,
 } from "ionicons/icons";
+import { useHistory } from "react-router-dom";
 import { Audit } from "../../types/audits";
 import { AuditService } from "../../services/AuditService";
 
 const Audits: React.FC = () => {
+  const history = useHistory();
   const [loading, setLoading] = useState(true);
   const [audits, setAudits] = useState<Audit[]>([]);
 
@@ -100,6 +103,16 @@ const Audits: React.FC = () => {
             padding: "20px",
           }}
         >
+          <div style={{ marginBottom: "10px" }}>
+            <IonButton
+              fill="clear"
+              color="light"
+              onClick={() => history.push("/assignments")}
+            >
+              <IonIcon slot="start" icon={arrowBackOutline} />
+              Atrás
+            </IonButton>
+          </div>
           <IonGrid fixed>
             <IonRow className="ion-margin-bottom">
               <IonCol>
