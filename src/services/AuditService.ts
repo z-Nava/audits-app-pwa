@@ -41,7 +41,10 @@ export const AuditService = {
   },
 
   async getAssignments(technicianId: number) {
-    const resp = await api.get(`/assignments?technician_id=${technicianId}`);
+    // Agregamos timestamp para evitar cache en móviles/proxies
+    const resp = await api.get(
+      `/assignments?technician_id=${technicianId}&_=${Date.now()}`
+    );
     return resp.data.data || resp.data;
   },
 };

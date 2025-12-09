@@ -27,11 +27,22 @@ export function useAuditPolling() {
         );
 
         if (!firstLoadRef.current) {
+          console.log("🔍 [Polling] Checking for new assignments...");
+          console.log(
+            "🔍 [Polling] Known IDs:",
+            Array.from(knownAuditsRef.current)
+          );
+          console.log("🔍 [Polling] Current IDs:", Array.from(currentIds));
+
           const newAssignments = currentData.filter(
             (a: any) => !knownAuditsRef.current.has(Number(a.id))
           );
 
           if (newAssignments.length > 0) {
+            console.log(
+              "🔔 [Polling] New assignments found:",
+              newAssignments.length
+            );
             presentAlert({
               header: "Nueva Asignación",
               subHeader: "Tienes asignaciones pendientes",
@@ -50,7 +61,14 @@ export function useAuditPolling() {
                 },
               ],
             });
+          } else {
+            console.log("🔍 [Polling] No new assignments.");
           }
+        } else {
+          console.log(
+            "🔍 [Polling] First load - initializing known IDs:",
+            Array.from(currentIds)
+          );
         }
 
         knownAuditsRef.current = currentIds;

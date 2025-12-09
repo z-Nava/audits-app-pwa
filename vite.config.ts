@@ -7,6 +7,14 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: "prompt",
+      devOptions: {
+        enabled: true,
+      },
+      workbox: {
+        cleanupOutdatedCaches: true,
+        clientsClaim: true,
+        skipWaiting: false,
+      },
       manifest: {
         name: "Audits App",
         short_name: "Audits",

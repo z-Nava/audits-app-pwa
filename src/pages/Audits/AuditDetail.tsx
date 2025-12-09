@@ -63,11 +63,21 @@ const AuditDetail: React.FC = () => {
       let auditItem: AuditItem | null = data.items?.[0] ?? null;
 
       if (!auditItem) {
-        const toolId = data.assignment.tools![0].id;
+        // Safety check: ensure tools exist
+        if (!data.assignment.tools || data.assignment.tools.length === 0) {
+          console.error("No tools associated with this assignment.");
+          // Handle this case gracefully, maybe return or set empty state
+          // For now, prevent the crash
+          return;
+        }
+
+        const toolId = data.assignment.tools[0].id;
         auditItem = await AuditService.createItem(data.id, toolId);
       }
 
       setItem(auditItem);
+    } catch (error) {
+      console.error("Error loading audit", error);
     } finally {
       setLoading(false);
     }
@@ -98,6 +108,10 @@ const AuditDetail: React.FC = () => {
   async function addPhoto(file: File) {
     if (!item) return;
 
+    // OPTIMISTIC UPDATE: Show photo immediately
+    const localUrl = URL.createObjectURL(file);
+    setPhotos((prev) => [...prev, { url: localUrl, synced: false }]);
+
     if (!isOnline) {
       await savePhotoOffline({
         audit_item_id: item.id,
@@ -106,40 +120,52 @@ const AuditDetail: React.FC = () => {
         type: file.type,
       });
 
-      const localUrl = URL.createObjectURL(file);
-
-      setPhotos((prev) => [...prev, { url: localUrl, synced: false }]);
-
       alert("Foto guardada offline. Se subirá al recuperar conexión.");
       return;
     }
 
-    const form = new FormData();
-    form.append("photo", file);
+    try {
+      const form = new FormData();
+      form.append("photo", file);
 
-    const resp = await api.post(`/audit-items/${item.id}/photos`, form, {
-      headers: { "Content-Type": "multipart/form-data" },
-    });
+      // Use a try-catch for the specific upload to allow fallback or error alert
+      const resp = await api.post(`/audit-items/${item.id}/photos`, form, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
 
-    let photoUrl = resp.data.url || resp.data.path;
-    if (
-      photoUrl &&
-      !photoUrl.startsWith("http") &&
-      !photoUrl.startsWith("blob:")
-    ) {
-      const apiBase =
-        (import.meta as any).env?.VITE_API_BASE || "http://localhost:8000";
-      const host = apiBase.replace(/\/api\/v1\/?$/, "");
-      photoUrl = `${host}/${photoUrl.replace(/^\//, "")}`;
+      let photoUrl = resp.data.url || resp.data.path;
+      if (
+        photoUrl &&
+        !photoUrl.startsWith("http") &&
+        !photoUrl.startsWith("blob:")
+      ) {
+        const apiBase =
+          (import.meta as any).env?.VITE_API_BASE || "http://localhost:8000";
+        const host = apiBase.replace(/\/api\/v1\/?$/, "");
+        photoUrl = `${host}/${photoUrl.replace(/^\//, "")}`;
+      }
+
+      // Update the optimistic item to synced
+      setPhotos((prev) => {
+        const copy = [...prev];
+        const idx = copy.findIndex((p) => p.url === localUrl);
+        if (idx !== -1) {
+          copy[idx] = { url: photoUrl, synced: true };
+        }
+        return copy;
+      });
+    } catch (e) {
+      console.error("Error uploading photo online", e);
+      alert("Error al subir la foto. Se intentará guardar offline.");
+      // Fallback
+      await savePhotoOffline({
+        audit_item_id: item.id,
+        file,
+        name: file.name,
+        type: file.type,
+      });
+      // Remains unsynced in UI
     }
-
-    setPhotos((prev) => [
-      ...prev,
-      {
-        url: photoUrl,
-        synced: true,
-      },
-    ]);
   }
 
   async function submitAudit() {
