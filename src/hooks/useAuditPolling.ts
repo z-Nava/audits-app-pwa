@@ -20,28 +20,38 @@ export function useAuditPolling() {
       try {
         const user = useUserStore.getState().user;
         if (!user?.id) return;
-
         const currentData = await AuditService.getAssignments(user.id);
+        const assignmentsWithAudit = await Promise.all(
+          currentData.map(async (a: any) => {
+            try {
+              const audit = await AuditService.findByAssignment(a.id, user.id);
+              return { ...a, audit };
+            } catch (error) {
+              return { ...a, audit: null };
+            }
+          })
+        );
 
         const currentMap = new Map<number, string>();
-        currentData.forEach((a: any) => {
-          currentMap.set(Number(a.id), a.status);
+        assignmentsWithAudit.forEach((a: any) => {
+          const status = a.audit ? a.audit.status : "pending";
+          currentMap.set(Number(a.id), status);
         });
 
         if (!firstLoadRef.current) {
           const newAssignments: any[] = [];
           const statusChangedAssignments: any[] = [];
 
-          currentData.forEach((a: any) => {
+          assignmentsWithAudit.forEach((a: any) => {
             const id = Number(a.id);
-            const status = a.status;
+            const status = a.audit ? a.audit.status : "pending";
 
             if (!knownAuditsRef.current.has(id)) {
               newAssignments.push(a);
             } else {
               const oldStatus = knownAuditsRef.current.get(id);
               if (oldStatus !== status) {
-                statusChangedAssignments.push({ ...a, oldStatus });
+                statusChangedAssignments.push({ ...a, status, oldStatus });
               }
             }
           });
@@ -69,25 +79,32 @@ export function useAuditPolling() {
 
           if (statusChangedAssignments.length > 0) {
             statusChangedAssignments.forEach((a) => {
-              let msg = `La asignación #${a.id} ha cambiado a: ${a.status}`;
+              const status = a.status;
               let header = "Actualización de Estado";
-
-              if (a.status === "cancelled") {
-                header = "Asignación Cancelada";
-                msg = `La asignación #${a.id} ha sido CANCELADA.`;
-              } else if (a.status === "completed") {
-                header = "Asignación Completada";
-                msg = `La asignación #${a.id} ha sido marcada como completada.`;
-              } else if (a.status === "assigned") {
-                header = "Re-asignación";
-                msg = `La asignación #${a.id} ha sido re-asignada.`;
+              let msg = `La asignación #${a.id} ha cambiado a: ${status}`;
+              let buttons = ["Entendido"];
+              switch (status) {
+                case "reviewed":
+                  header = "Auditoría Revisada";
+                  msg = `La auditoría #${a.id} ha sido REVISADA por el supervisor.`;
+                  break;
+                case "submitted":
+                  header = "Auditoría Enviada";
+                  msg = `La auditoría #${a.id} ha sido ENVIADA correctamente.`;
+                  break;
+                case "in_progress":
+                  header = "En Progreso";
+                  msg = `La auditoría #${a.id} está en curso.`;
+                  break;
+                case "pending":
+                  msg = `La auditoría #${a.id} está pendiente de inicio.`;
+                  break;
               }
-
               presentAlert({
-                header: header,
+                header,
                 subHeader: `Asignación #${a.id}`,
                 message: msg,
-                buttons: ["Entendido"],
+                buttons,
               });
             });
           }
@@ -95,9 +112,10 @@ export function useAuditPolling() {
 
         knownAuditsRef.current = currentMap;
         firstLoadRef.current = false;
-      } catch (error) {}
+      } catch (error) {
+        // silent error
+      }
     };
-
     checkAudits();
     const intervalId = setInterval(checkAudits, POLLING_INTERVAL);
     return () => clearInterval(intervalId);
