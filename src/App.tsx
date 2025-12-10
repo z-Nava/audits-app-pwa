@@ -21,6 +21,18 @@ import ReloadPrompt from "./components/ReloadPrompt";
 
 const App: React.FC = () => {
   useAuditPolling();
+
+  React.useEffect(() => {
+    const handleOnline = () => {
+      if (navigator.serviceWorker && navigator.serviceWorker.controller) {
+        navigator.serviceWorker.controller.postMessage({ type: "SYNC_NOW" });
+      }
+    };
+
+    window.addEventListener("online", handleOnline);
+    return () => window.removeEventListener("online", handleOnline);
+  }, []);
+
   return (
     <IonApp>
       <ReloadPrompt />
