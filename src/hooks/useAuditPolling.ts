@@ -10,7 +10,7 @@ export function useAuditPolling() {
   const [presentAlert] = useIonAlert();
   const history = useHistory();
   const token = useUserStore((s) => s.token);
-  const knownAuditsRef = useRef<Set<number>>(new Set());
+  const knownAuditsRef = useRef<Map<number, string>>(new Map());
   const firstLoadRef = useRef(true);
 
   useEffect(() => {
@@ -22,27 +22,31 @@ export function useAuditPolling() {
         if (!user?.id) return;
 
         const currentData = await AuditService.getAssignments(user.id);
-        const currentIds = new Set<number>(
-          currentData.map((a: any) => Number(a.id))
-        );
+
+        const currentMap = new Map<number, string>();
+        currentData.forEach((a: any) => {
+          currentMap.set(Number(a.id), a.status);
+        });
 
         if (!firstLoadRef.current) {
-          console.log("🔍 [Polling] Checking for new assignments...");
-          console.log(
-            "🔍 [Polling] Known IDs:",
-            Array.from(knownAuditsRef.current)
-          );
-          console.log("🔍 [Polling] Current IDs:", Array.from(currentIds));
+          const newAssignments: any[] = [];
+          const statusChangedAssignments: any[] = [];
 
-          const newAssignments = currentData.filter(
-            (a: any) => !knownAuditsRef.current.has(Number(a.id))
-          );
+          currentData.forEach((a: any) => {
+            const id = Number(a.id);
+            const status = a.status;
+
+            if (!knownAuditsRef.current.has(id)) {
+              newAssignments.push(a);
+            } else {
+              const oldStatus = knownAuditsRef.current.get(id);
+              if (oldStatus !== status) {
+                statusChangedAssignments.push({ ...a, oldStatus });
+              }
+            }
+          });
 
           if (newAssignments.length > 0) {
-            console.log(
-              "🔔 [Polling] New assignments found:",
-              newAssignments.length
-            );
             presentAlert({
               header: "Nueva Asignación",
               subHeader: "Tienes asignaciones pendientes",
@@ -61,21 +65,37 @@ export function useAuditPolling() {
                 },
               ],
             });
-          } else {
-            console.log("🔍 [Polling] No new assignments.");
           }
-        } else {
-          console.log(
-            "🔍 [Polling] First load - initializing known IDs:",
-            Array.from(currentIds)
-          );
+
+          if (statusChangedAssignments.length > 0) {
+            statusChangedAssignments.forEach((a) => {
+              let msg = `La asignación #${a.id} ha cambiado a: ${a.status}`;
+              let header = "Actualización de Estado";
+
+              if (a.status === "cancelled") {
+                header = "Asignación Cancelada";
+                msg = `La asignación #${a.id} ha sido CANCELADA.`;
+              } else if (a.status === "completed") {
+                header = "Asignación Completada";
+                msg = `La asignación #${a.id} ha sido marcada como completada.`;
+              } else if (a.status === "assigned") {
+                header = "Re-asignación";
+                msg = `La asignación #${a.id} ha sido re-asignada.`;
+              }
+
+              presentAlert({
+                header: header,
+                subHeader: `Asignación #${a.id}`,
+                message: msg,
+                buttons: ["Entendido"],
+              });
+            });
+          }
         }
 
-        knownAuditsRef.current = currentIds;
+        knownAuditsRef.current = currentMap;
         firstLoadRef.current = false;
-      } catch (error) {
-        console.error("Error polling assignments:", error);
-      }
+      } catch (error) {}
     };
 
     checkAudits();

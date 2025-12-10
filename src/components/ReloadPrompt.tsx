@@ -22,7 +22,6 @@ const ReloadPrompt: React.FC = () => {
   useEffect(() => {
     if (registration) {
       const interval = setInterval(() => {
-        console.log("Checking for SW update...");
         registration.update();
       }, 5000); // Revisar cada 5 segundos para pruebas
       return () => clearInterval(interval);
