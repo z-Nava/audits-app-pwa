@@ -16,6 +16,7 @@ export default defineConfig({
       },
       injectManifest: {
         maximumFileSizeToCacheInBytes: 5000000,
+        globPatterns: ["**/*.{js,css,html,ico,png,svg}"],
       },
       manifest: {
         name: "Audits App",

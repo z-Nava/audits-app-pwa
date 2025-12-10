@@ -4,7 +4,7 @@
 
 console.log("[SW] Running v5.1 🚀");
 
-const APP_VERSION = "v2.2.1";
+const APP_VERSION = "v2.2.4"; // Bumped version
 const STATIC_CACHE = `static-${APP_VERSION}`;
 const API_CACHE = `api-${APP_VERSION}`;
 const DB_NAME = "audit-offline-db";
@@ -14,13 +14,7 @@ const API_QUEUE = "api-queue";
 const PHOTO_QUEUE = "photo-queue";
 const OFFLINE_URL = "/offline.html";
 
-const STATIC_FILES = [
-  "/",
-  "/index.html",
-  "/offline.html",
-  "/manifest.json",
-  "/favicon.png",
-];
+const STATIC_FILES = ["/", "/offline.html"];
 
 /* Incorporar assets de Vite (injectManifest) */
 const manifest = self.__WB_MANIFEST;
@@ -30,10 +24,13 @@ if (manifest) {
 }
 
 /* Install */
-/* Install */
 self.addEventListener("install", (event) => {
+  const uniqueFiles = [...new Set(STATIC_FILES)]; // Deduplicate
   event.waitUntil(
-    caches.open(STATIC_CACHE).then((c) => c.addAll(STATIC_FILES))
+    caches
+      .open(STATIC_CACHE)
+      .then((c) => c.addAll(uniqueFiles))
+      .catch((e) => console.error("[SW] Install Error:", e))
   );
   // self.skipWaiting(); // Deshabilitado para update manual
 });
@@ -48,7 +45,25 @@ self.addEventListener("message", (event) => {
 
 /* Activate */
 self.addEventListener("activate", (event) => {
-  event.waitUntil(self.clients.claim());
+  event.waitUntil(
+    Promise.all([
+      self.clients.claim(),
+      caches.keys().then((keys) => {
+        return Promise.all(
+          keys.map((key) => {
+            if (
+              key !== STATIC_CACHE &&
+              key !== API_CACHE &&
+              (key.startsWith("static-") || key.startsWith("api-"))
+            ) {
+              console.log("[SW] Deleting old cache:", key);
+              return caches.delete(key);
+            }
+          })
+        );
+      }),
+    ])
+  );
   console.log("[SW] Activated v5.1!");
 });
 
