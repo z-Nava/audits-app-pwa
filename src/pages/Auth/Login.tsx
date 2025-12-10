@@ -101,7 +101,7 @@ const Login: React.FC = () => {
                             letterSpacing: "1px",
                           }}
                         >
-                          Bienvenido 22222
+                          Bienvenido
                         </h1>
                         <p style={{ color: "#a0a0a0", fontSize: "0.9rem" }}>
                           Inicia sesión para continuar
