@@ -80,29 +80,33 @@ export function useAuditPolling() {
           if (statusChangedAssignments.length > 0) {
             statusChangedAssignments.forEach((a) => {
               const status = a.status;
+              const name = a.line ? a.line.name : `Asignación ${a.id}`;
+
               let header = "Actualización de Estado";
-              let msg = `La asignación #${a.id} ha cambiado a: ${status}`;
+              let msg = `La asignación de ${name} ha cambiado a: ${status}`;
               let buttons = ["Entendido"];
+
               switch (status) {
                 case "reviewed":
                   header = "Auditoría Revisada";
-                  msg = `La auditoría #${a.id} ha sido REVISADA por el supervisor.`;
+                  msg = `La auditoría de ${name} ha sido REVISADA por el supervisor.`;
                   break;
                 case "submitted":
                   header = "Auditoría Enviada";
-                  msg = `La auditoría #${a.id} ha sido ENVIADA correctamente.`;
+                  msg = `La auditoría de ${name} ha sido ENVIADA correctamente.`;
                   break;
                 case "in_progress":
                   header = "En Progreso";
-                  msg = `La auditoría #${a.id} está en curso.`;
+                  msg = `La auditoría de ${name} está en curso.`;
                   break;
                 case "pending":
-                  msg = `La auditoría #${a.id} está pendiente de inicio.`;
+                  msg = `La auditoría de ${name} está pendiente de inicio.`;
                   break;
               }
+
               presentAlert({
                 header,
-                subHeader: `Asignación #${a.id}`,
+                subHeader: name,
                 message: msg,
                 buttons,
               });
