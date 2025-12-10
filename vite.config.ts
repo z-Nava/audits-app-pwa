@@ -7,13 +7,15 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: "prompt",
+      strategies: "injectManifest",
+      srcDir: "src",
+      filename: "service-worker.js",
       devOptions: {
         enabled: true,
+        type: "module",
       },
-      workbox: {
-        cleanupOutdatedCaches: true,
-        clientsClaim: true,
-        skipWaiting: false,
+      injectManifest: {
+        maximumFileSizeToCacheInBytes: 5000000,
       },
       manifest: {
         name: "Audits App",

@@ -22,9 +22,17 @@ const STATIC_FILES = [
   "/favicon.png",
 ];
 
+/* Incorporar assets de Vite (injectManifest) */
+if (typeof self.__WB_MANIFEST !== "undefined") {
+  const manifestUrls = self.__WB_MANIFEST.map((entry) => entry.url);
+  STATIC_FILES.push(...manifestUrls);
+}
+
 /* Install */
 self.addEventListener("install", (event) => {
-  event.waitUntil(caches.open(STATIC_CACHE).then((c) => c.addAll(STATIC_FILES)));
+  event.waitUntil(
+    caches.open(STATIC_CACHE).then((c) => c.addAll(STATIC_FILES))
+  );
   self.skipWaiting();
 });
 
@@ -133,24 +141,21 @@ async function queueRequest(req) {
     tx.onabort = () => reject(tx.error);
   });
 
-  
- if (self.registration.sync) {
-  try {
-    await self.registration.sync.register("sync-api");
-    await self.registration.sync.register("sync-photos"); 
-    console.log("[SW] sync-api y sync-photos registrados");
-  } catch (e) {
-    console.warn("[SW] No se pudo registrar BG Sync:", e);
+  if (self.registration.sync) {
+    try {
+      await self.registration.sync.register("sync-api");
+      await self.registration.sync.register("sync-photos");
+      console.log("[SW] sync-api y sync-photos registrados");
+    } catch (e) {
+      console.warn("[SW] No se pudo registrar BG Sync:", e);
+    }
   }
-}
 
-self.addEventListener("online", () => {
-  console.log("[SW] ONLINE → Sync start");
-  syncApiQueue();
-  syncPhotoQueue();
-});
-
-
+  self.addEventListener("online", () => {
+    console.log("[SW] ONLINE → Sync start");
+    syncApiQueue();
+    syncPhotoQueue();
+  });
 
   console.warn("[SW] API guardada offline:", req.url);
 
@@ -207,7 +212,6 @@ function getApiQueueEntries() {
   });
 }
 
-
 /* ======================================================
    Procesar colas
 ====================================================== */
@@ -215,9 +219,11 @@ function getApiQueueEntries() {
    Procesar colas API (versión sin cursor + await)
 ====================================================== */
 async function syncApiQueue() {
-  console.log("%c[SW] syncApiQueue START 🚀", "color: yellow; font-weight: bold");
+  console.log(
+    "%c[SW] syncApiQueue START 🚀",
+    "color: yellow; font-weight: bold"
+  );
 
- 
   const entries = await getApiQueueEntries();
   console.log("[SW] Entries to sync:", entries.length);
 
@@ -237,7 +243,7 @@ async function syncApiQueue() {
       const res = await fetch(url, {
         method,
         headers,
-        body: (method === "GET" || method === "HEAD") ? undefined : body,
+        body: method === "GET" || method === "HEAD" ? undefined : body,
       });
 
       console.log("%c[SW] Response:", "color: lightgreen", res.status, url);
@@ -263,9 +269,11 @@ async function syncApiQueue() {
     }
   }
 
-  console.log("%c[SW] syncApiQueue FINISHED 🟢", "color: lime; font-weight: bold");
+  console.log(
+    "%c[SW] syncApiQueue FINISHED 🟢",
+    "color: lime; font-weight: bold"
+  );
 }
-
 
 /* Helper para borrar una entrada por key en una transacción corta */
 function deleteApiQueueEntry(key) {
@@ -286,10 +294,6 @@ function deleteApiQueueEntry(key) {
     };
   });
 }
-
-
-
-
 
 /* Procesar cola de fotos */
 /* Procesar cola de fotos (versión correcta con IDBRequest) */
@@ -329,7 +333,6 @@ async function syncPhotoQueue() {
         return;
       }
 
-    
       const form = new FormData();
       form.append("photo", entry.file, entry.name);
       if (entry.caption) form.append("caption", entry.caption);
@@ -337,7 +340,6 @@ async function syncPhotoQueue() {
 
       console.log("[SW] FormData keys:", Array.from(form.keys()));
 
-      
       const headers = entry.headers ? { ...entry.headers } : {};
       delete headers["Content-Type"];
 
@@ -366,7 +368,7 @@ async function syncPhotoQueue() {
           console.warn("[SW] Error deleting cursor:", e);
         }
 
-        cursor.continue(); 
+        cursor.continue();
       } catch (err) {
         console.error("[SW] ❌ Error de red → retry later:", err);
         resolve();
@@ -374,7 +376,6 @@ async function syncPhotoQueue() {
     };
   });
 }
-
 
 /* ======================================================
    IndexedDB Unificada
@@ -415,7 +416,7 @@ async function serializeRequest(req) {
   if (req.method !== "GET" && req.method !== "HEAD") {
     console.log("[SW] Cloning request for body extraction");
     try {
-      body = await req.clone().text();   
+      body = await req.clone().text();
     } catch (e) {
       console.warn("[SW] Error reading body:", e);
       body = null;
@@ -429,5 +430,3 @@ async function serializeRequest(req) {
     body,
   };
 }
-
-
