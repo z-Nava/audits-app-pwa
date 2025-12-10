@@ -23,8 +23,9 @@ const STATIC_FILES = [
 ];
 
 /* Incorporar assets de Vite (injectManifest) */
-if (typeof self.__WB_MANIFEST !== "undefined") {
-  const manifestUrls = self.__WB_MANIFEST.map((entry) => entry.url);
+const manifest = self.__WB_MANIFEST;
+if (manifest) {
+  const manifestUrls = manifest.map((entry) => entry.url);
   STATIC_FILES.push(...manifestUrls);
 }
 
