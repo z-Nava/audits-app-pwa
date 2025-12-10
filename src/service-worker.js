@@ -14,22 +14,35 @@ const API_QUEUE = "api-queue";
 const PHOTO_QUEUE = "photo-queue";
 const OFFLINE_URL = "/offline.html";
 
-const STATIC_FILES = ["/", "/offline.html"];
-
 /* Incorporar assets de Vite (injectManifest) */
-const manifest = self.__WB_MANIFEST;
-if (manifest) {
-  const manifestUrls = manifest.map((entry) => entry.url);
-  STATIC_FILES.push(...manifestUrls);
-}
-
 /* Install */
 self.addEventListener("install", (event) => {
-  const uniqueFiles = [...new Set(STATIC_FILES)]; // Deduplicate
+  const manifest = self.__WB_MANIFEST || [];
+  const manifestUrls = manifest.map((entry) => entry.url);
+
+  // Incluimos "/" y "/offline.html" manuales + el manifiesto
+  const rawUrls = ["/", "/offline.html", ...manifestUrls];
+
+  // Deduplicación robusta usando URLs absolutas
+  const uniqueUrlSet = new Set();
+  const filesToCache = [];
+
+  for (const url of rawUrls) {
+    try {
+      const normalized = new URL(url, self.location).href;
+      if (!uniqueUrlSet.has(normalized)) {
+        uniqueUrlSet.add(normalized);
+        filesToCache.push(normalized);
+      }
+    } catch (err) {
+      console.warn("[SW] Skipping invalid URL:", url, err);
+    }
+  }
+
   event.waitUntil(
     caches
       .open(STATIC_CACHE)
-      .then((c) => c.addAll(uniqueFiles))
+      .then((c) => c.addAll(filesToCache))
       .catch((e) => console.error("[SW] Install Error:", e))
   );
   // self.skipWaiting(); // Deshabilitado para update manual
