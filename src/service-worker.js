@@ -4,7 +4,7 @@
 
 console.log("[SW] Running v5.1 🚀");
 
-const APP_VERSION = "v2.2.4"; // Bumped version
+const APP_VERSION = "v2.2.5"; // Bumped version
 const STATIC_CACHE = `static-${APP_VERSION}`;
 const API_CACHE = `api-${APP_VERSION}`;
 const DB_NAME = "audit-offline-db";

@@ -29,6 +29,32 @@ const ReloadPrompt: React.FC = () => {
     }
   }, [registration]);
 
+  // Manejar recarga automática cuando el SW tome el control
+  useEffect(() => {
+    let refreshing = false;
+    const handleControllerChange = () => {
+      if (!refreshing) {
+        refreshing = true;
+        window.location.reload();
+      }
+    };
+
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.addEventListener(
+        "controllerchange",
+        handleControllerChange
+      );
+    }
+    return () => {
+      if ("serviceWorker" in navigator) {
+        navigator.serviceWorker.removeEventListener(
+          "controllerchange",
+          handleControllerChange
+        );
+      }
+    };
+  }, []);
+
   const [presentAlert] = useIonAlert();
 
   useEffect(() => {
