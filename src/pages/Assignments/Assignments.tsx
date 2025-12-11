@@ -171,7 +171,7 @@ const Assignments: React.FC = () => {
                       letterSpacing: "1px",
                     }}
                   >
-                    MIS ASIGNACIONES PENDEJO
+                    MIS ASIGNACIONES
                   </h1>
                 </IonText>
               </IonCol>
